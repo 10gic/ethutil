@@ -6,6 +6,32 @@ An Ethereum util, can transfer eth, check balance, drop pending tx, etc
 GO111MODULE=on go install github.com/10gic/ethutil
 ```
 
+# Usage
+```shell
+$ ethutil --help
+An Ethereum util, can transfer eth, check balance, drop pending tx, etc
+
+Usage:
+  ethutil [command]
+
+Available Commands:
+  check-balance   Check eth balance for address
+  drop-pending-tx Drop pending tx for address
+  dump-address    Dump address from private private key
+  gen-private-key Generate eth private key
+  help            Help about any command
+  transfer        Transfer eth to another address
+
+Flags:
+      --gas-price string   the gas price, unit is gwei.
+  -h, --help               help for ethutil
+      --node string        mainnet | ropsten | kovan | rinkeby, the node type (default "mainnet")
+      --node-url string    the target connection node url, if this option specified, the --node option is ignored
+  -t, --terse              produce terse output
+
+Use "ethutil [command] --help" for more information about a command.
+```
+
 # Example
 Check balance:
 ```shell
