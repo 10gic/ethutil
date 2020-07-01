@@ -13,6 +13,13 @@ $ ethutil check-balance --addr 0x756F45E3FA69347A9A973A725E3C98bC4db0b5a0
 addr 0x756F45E3FA69347A9A973A725E3C98bC4db0b5a0, balance 0.026990556 ether
 ```
 
+Check balance (terse output, multiple addresses):
+```shell
+$ ethutil --terse check-balance --addr 0x756F45E3FA69347A9A973A725E3C98bC4db0b5a0 --addr 0xf42f905231c770f0a406f2b768877fb49eee0f21
+0x756F45E3FA69347A9A973A725E3C98bC4db0b5a0 0.026990556
+0xf42f905231c770f0a406f2b768877fb49eee0f21 408.33061699
+```
+
 Transfer eth:
 ```shell
 $ ethutil transfer --private-key 0xXXX --to-addr 0xYYY --amount 1 --unit ether
