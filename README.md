@@ -7,7 +7,7 @@ GO111MODULE=on go install github.com/10gic/ethutil
 ```
 
 # Usage
-```shell
+```txt
 $ ethutil --help
 An Ethereum util, can transfer eth, check balance, drop pending tx, etc
 
