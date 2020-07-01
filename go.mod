@@ -1,4 +1,4 @@
-module ethutil
+module github.com/10gic/ethutil
 
 go 1.13
 

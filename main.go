@@ -1,7 +1,7 @@
 package main
 
-import "ethutil/cmd"
+import "github.com/10gic/ethutil/cmd"
 
-func main()  {
+func main() {
 	cmd.Execute()
 }
