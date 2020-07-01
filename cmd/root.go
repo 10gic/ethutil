@@ -18,11 +18,17 @@ var (
 	}
 )
 
-const nodeUrlMainnet = "wss://mainnet.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472" // please replace it
-const nodeUrlKovan = "wss://kovan.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472" // please replace it
-
 const nodeMainnet = "mainnet"
+const nodeRopsten = "ropsten"
 const nodeKovan = "kovan"
+const nodeRinkeby = "rinkeby"
+
+var nodeUrlMap = map[string]string{
+	nodeMainnet: "wss://mainnet.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472", // please replace it
+	nodeRopsten: "wss://ropsten.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472", // please replace it
+	nodeKovan:   "wss://kovan.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472",   // please replace it
+	nodeRinkeby: "wss://rinkeby.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472", // please replace it
+}
 
 // Execute cobra root command
 func Execute() error {
@@ -33,7 +39,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVarP(&nodeUrlOpt, "node-url", "", "", "the target connection node url, if this option specified, the --node option is ignored")
-	rootCmd.PersistentFlags().StringVarP(&nodeOpt, "node", "x", "mainnet", "mainnet | kovan, the node type")
+	rootCmd.PersistentFlags().StringVarP(&nodeOpt, "node", "", "mainnet", "mainnet | ropsten | kovan | rinkeby, the node type")
 	rootCmd.PersistentFlags().StringVarP(&gasPriceOpt, "gas-price", "", "", "the gas price, unit is gwei.")
 	rootCmd.PersistentFlags().BoolVarP(&terseOutputOpt, "terse", "t", false, "produce terse output")
 
@@ -56,10 +62,14 @@ func initConfig() {
 	checkErr(err)
 
 	// validation
-	if !contains([]string{nodeMainnet, nodeKovan}, nodeOpt) {
+	if !contains([]string{nodeMainnet, nodeRopsten, nodeKovan, nodeRinkeby}, nodeOpt) {
 		log.Printf("invalid option for --node: %v", nodeOpt)
 		rootCmd.Help()
 		os.Exit(1)
+	}
+
+	if nodeUrlOpt == "" {
+		nodeUrlOpt = nodeUrlMap[nodeOpt]
 	}
 
 	if gasPriceOpt != "" {
@@ -67,14 +77,6 @@ func initConfig() {
 			log.Printf("invalid option for --gas-price: %v", gasPriceOpt)
 			rootCmd.Help()
 			os.Exit(1)
-		}
-	}
-
-	if nodeUrlOpt == "" {
-		if nodeOpt == nodeMainnet {
-			nodeUrlOpt = nodeUrlMainnet
-		} else if nodeOpt == nodeKovan {
-			nodeUrlOpt = nodeUrlKovan
 		}
 	}
 }
