@@ -100,7 +100,7 @@ recheck:
 		if err == ethereum.NotFound {
 			log.Printf("tx %v not found (may be pending) in ethereum", txHash.String())
 		} else {
-			return nil, fmt.Errorf("TransactionReceipt failL %w", err)
+			return nil, fmt.Errorf("TransactionReceipt fail: %w", err)
 		}
 	} else {
 		// no error
