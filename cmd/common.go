@@ -40,6 +40,16 @@ func isValidEthAddress(v string) bool {
 	return ethAddressRE.MatchString(v)
 }
 
+func isContractAddress(client *ethclient.Client, address common.Address) (bool, error) {
+	bytecode, err := client.CodeAt(context.Background(), address, nil) // nil is latest block
+	if err != nil {
+		return false, err
+	}
+
+	isContract := len(bytecode) > 0
+	return isContract, nil
+}
+
 func bigInt2Decimal(x *big.Int) decimal.Decimal {
 	if x == nil {
 		return decimal.New(0, 0)

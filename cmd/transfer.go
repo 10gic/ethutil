@@ -18,12 +18,14 @@ var transferPrivateKeyHex string
 var transferTargetAddr string
 var transferUnit string
 var transferAmt string
+var transferHexData []byte
 
 func init() {
 	transferCmd.Flags().StringVarP(&transferPrivateKeyHex, "private-key", "k", "", "the private key, eth would be send from this account")
 	transferCmd.Flags().StringVarP(&transferTargetAddr, "to-addr", "", "", "the target address you want to transfer eth")
 	transferCmd.Flags().StringVarP(&transferUnit, "unit", "u", "ether", "wei | gwei | ether, unit of amount")
 	transferCmd.Flags().StringVarP(&transferAmt, "amount", "n", "", "the amount you want to transfer, special word \"all\" means all balance would transfer to target address, unit is specified by --unit")
+	transferCmd.Flags().BytesHexVarP(&transferHexData, "hex-data", "", nil, "the payload hex data when transfer, please remove the leading 0x")
 
 	transferCmd.MarkFlagRequired("private-key")
 	transferCmd.MarkFlagRequired("to-addr")
@@ -114,7 +116,7 @@ var transferCmd = &cobra.Command{
 			amountInWei = unify2Wei(amount, transferUnit)
 		}
 
-		if tx, err := TransferHelper(client, transferPrivateKeyHex, transferTargetAddr, amountInWei.BigInt(), gasPrice); err != nil {
+		if tx, err := TransferHelper(client, transferPrivateKeyHex, transferTargetAddr, amountInWei.BigInt(), gasPrice, transferHexData); err != nil {
 			log.Fatalf("transfer fail: %v", err)
 		} else {
 			log.Printf("transfer finished, tx = %v", tx)
@@ -122,7 +124,8 @@ var transferCmd = &cobra.Command{
 	},
 }
 
-func Transfer(client *ethclient.Client, privateKey *ecdsa.PrivateKey, toAddress common.Address, amount *big.Int, gasPrice *big.Int) (string, error) {
+
+func Transfer(client *ethclient.Client, privateKey *ecdsa.PrivateKey, toAddress common.Address, amount *big.Int, gasPrice *big.Int, data []byte) (string, error) {
 	fromAddress := extractAddressFromPrivateKey(privateKey)
 
 	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
@@ -130,9 +133,19 @@ func Transfer(client *ethclient.Client, privateKey *ecdsa.PrivateKey, toAddress 
 		return "", fmt.Errorf("PendingNonceAt fail: %w", err)
 	}
 
-	gasLimit := uint64(gasUsedByTransferEth)
+	isContract, err := isContractAddress(client, toAddress)
+	if err != nil {
+		return "", fmt.Errorf("isContractAddress fail: %w", err)
+	}
 
-	var data []byte
+	gasLimit := uint64(gasUsedByTransferEth)
+	if isContract { // gasUsedByTransferEth may be not enough if send to contract
+		gasLimit = 900000
+	}
+	if len(data) > 0 { // gasUsedByTransferEth may be not enough if with payload data
+		gasLimit = 900000
+	}
+
 	tx := types.NewTransaction(nonce, toAddress, amount, gasLimit, gasPrice, data)
 
 	chainID, err := client.NetworkID(context.Background())
@@ -164,11 +177,11 @@ func Transfer(client *ethclient.Client, privateKey *ecdsa.PrivateKey, toAddress 
 	return signedTx.Hash().String(), nil
 }
 
-func TransferHelper(client *ethclient.Client, privateKeyHex string, toAddress string, amountInWei *big.Int, gasPrice *big.Int) (string, error) {
+func TransferHelper(client *ethclient.Client, privateKeyHex string, toAddress string, amountInWei *big.Int, gasPrice *big.Int, data []byte) (string, error) {
 	log.Printf("transfer %v ether (%v wei) from %v to %v",
 		wei2Other(bigInt2Decimal(amountInWei), unitEther).String(),
 		amountInWei.String(),
 		extractAddressFromPrivateKey(buildPrivateKeyFromHex(privateKeyHex)).String(),
 		toAddress)
-	return Transfer(client, buildPrivateKeyFromHex(privateKeyHex), common.HexToAddress(toAddress), amountInWei, gasPrice)
+	return Transfer(client, buildPrivateKeyFromHex(privateKeyHex), common.HexToAddress(toAddress), amountInWei, gasPrice, data)
 }

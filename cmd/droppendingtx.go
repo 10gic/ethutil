@@ -31,7 +31,7 @@ var dropPendingTxCmd = &cobra.Command{
 		log.Printf("gas price change to %v wei", gasPrice)
 
 		addr := extractAddressFromPrivateKey(buildPrivateKeyFromHex(dropPendingTxPrivateKeyHex)).String()
-		if tx, err := TransferHelper(client, dropPendingTxPrivateKeyHex, addr, big.NewInt(0), gasPrice); err != nil {
+		if tx, err := TransferHelper(client, dropPendingTxPrivateKeyHex, addr, big.NewInt(0), gasPrice, nil); err != nil {
 			log.Fatalf("transfer 0 wei to self fail: %v", err)
 		} else {
 			log.Printf("transfer 0 wei to self finished, tx = %v", tx)
