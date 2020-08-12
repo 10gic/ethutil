@@ -27,7 +27,7 @@ Flags:
   -h, --help               help for ethutil
       --node string        mainnet | ropsten | kovan | rinkeby, the node type (default "mainnet")
       --node-url string    the target connection node url, if this option specified, the --node option is ignored
-  -t, --terse              produce terse output
+      --terse              produce terse output
 
 Use "ethutil [command] --help" for more information about a command.
 ```

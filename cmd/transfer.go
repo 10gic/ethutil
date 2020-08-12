@@ -22,7 +22,7 @@ var transferHexData []byte
 
 func init() {
 	transferCmd.Flags().StringVarP(&transferPrivateKeyHex, "private-key", "k", "", "the private key, eth would be send from this account")
-	transferCmd.Flags().StringVarP(&transferTargetAddr, "to-addr", "", "", "the target address you want to transfer eth")
+	transferCmd.Flags().StringVarP(&transferTargetAddr, "to-addr", "t", "", "the target address you want to transfer eth")
 	transferCmd.Flags().StringVarP(&transferUnit, "unit", "u", "ether", "wei | gwei | ether, unit of amount")
 	transferCmd.Flags().StringVarP(&transferAmt, "amount", "n", "", "the amount you want to transfer, special word \"all\" means all balance would transfer to target address, unit is specified by --unit")
 	transferCmd.Flags().BytesHexVarP(&transferHexData, "hex-data", "", nil, "the payload hex data when transfer, please remove the leading 0x")

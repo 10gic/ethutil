@@ -41,7 +41,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&nodeUrlOpt, "node-url", "", "", "the target connection node url, if this option specified, the --node option is ignored")
 	rootCmd.PersistentFlags().StringVarP(&nodeOpt, "node", "", "mainnet", "mainnet | ropsten | kovan | rinkeby, the node type")
 	rootCmd.PersistentFlags().StringVarP(&gasPriceOpt, "gas-price", "", "", "the gas price, unit is gwei.")
-	rootCmd.PersistentFlags().BoolVarP(&terseOutputOpt, "terse", "t", false, "produce terse output")
+	rootCmd.PersistentFlags().BoolVarP(&terseOutputOpt, "terse", "", false, "produce terse output")
 
 	rootCmd.AddCommand(balanceCmd)
 	rootCmd.AddCommand(transferCmd)
