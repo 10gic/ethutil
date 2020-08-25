@@ -18,6 +18,7 @@ var transferPrivateKeyHex string
 var transferTargetAddr string
 var transferUnit string
 var transferAmt string
+var transferNotCheck bool
 var transferHexData []byte
 
 func init() {
@@ -25,6 +26,7 @@ func init() {
 	transferCmd.Flags().StringVarP(&transferTargetAddr, "to-addr", "t", "", "the target address you want to transfer eth")
 	transferCmd.Flags().StringVarP(&transferUnit, "unit", "u", "ether", "wei | gwei | ether, unit of amount")
 	transferCmd.Flags().StringVarP(&transferAmt, "amount", "n", "", "the amount you want to transfer, special word \"all\" means all balance would transfer to target address, unit is specified by --unit")
+	transferCmd.Flags().BoolVarP(&transferNotCheck, "not-check", "", false, "don't check result, return immediately after send transaction")
 	transferCmd.Flags().BytesHexVarP(&transferHexData, "hex-data", "", nil, "the payload hex data when transfer, please remove the leading 0x")
 
 	transferCmd.MarkFlagRequired("private-key")
@@ -163,6 +165,9 @@ func Transfer(client *ethclient.Client, privateKey *ecdsa.PrivateKey, toAddress 
 		return "", fmt.Errorf("SendTransaction fail: %w", err)
 	}
 
+	if transferNotCheck {
+		return signedTx.Hash().String(), nil
+	}
 	//log.Printf("tx sent: %s", signedTx.Hash().Hex())
 
 	rp, err := getReceipt(client, signedTx.Hash(), 0)
