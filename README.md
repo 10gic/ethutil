@@ -1,5 +1,5 @@
 # ethutil
-An Ethereum util, can transfer eth, check balance, drop pending tx, etc
+An Ethereum util, can transfer eth, check balance, drop pending tx, call any contract function etc
 
 # Install
 ```shell
@@ -83,7 +83,6 @@ $ ethutil --terse gen-private-key -n 10
 Invokes the (paid) contract method:
 ```shell
 $ ethutil --node mainnet --private-key 0xXXX contract-call 0xdac17f958d2ee523a2206206994597c13d831ec7 'transfer(address, uint256)' 0x8F36975cdeA2e6E64f85719788C8EFBBe89DFBbb 1000000
-ret0 = 1100000000000
 ```
 
 Invokes the (constant) contract method:
