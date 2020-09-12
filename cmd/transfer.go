@@ -2,10 +2,7 @@ package cmd
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"fmt"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
@@ -14,7 +11,6 @@ import (
 	"os"
 )
 
-var transferPrivateKeyHex string
 var transferTargetAddr string
 var transferUnit string
 var transferAmt string
@@ -22,14 +18,12 @@ var transferNotCheck bool
 var transferHexData []byte
 
 func init() {
-	transferCmd.Flags().StringVarP(&transferPrivateKeyHex, "private-key", "k", "", "the private key, eth would be send from this account")
 	transferCmd.Flags().StringVarP(&transferTargetAddr, "to-addr", "t", "", "the target address you want to transfer eth")
 	transferCmd.Flags().StringVarP(&transferUnit, "unit", "u", "ether", "wei | gwei | ether, unit of amount")
 	transferCmd.Flags().StringVarP(&transferAmt, "amount", "n", "", "the amount you want to transfer, special word \"all\" means all balance would transfer to target address, unit is specified by --unit")
 	transferCmd.Flags().BoolVarP(&transferNotCheck, "not-check", "", false, "don't check result, return immediately after send transaction")
 	transferCmd.Flags().BytesHexVarP(&transferHexData, "hex-data", "", nil, "the payload hex data when transfer, please remove the leading 0x")
 
-	transferCmd.MarkFlagRequired("private-key")
 	transferCmd.MarkFlagRequired("to-addr")
 	transferCmd.MarkFlagRequired("amount")
 }
@@ -43,6 +37,11 @@ func validationTransferCmdOpts() bool {
 
 	if ! isValidEthAddress(transferTargetAddr) {
 		log.Fatalf("%v is not a valid eth address", transferTargetAddr)
+		return false
+	}
+
+	if privateKeyOpt == "" {
+		log.Fatalf("--private-key is required for transfer command")
 		return false
 	}
 
@@ -97,7 +96,7 @@ var transferCmd = &cobra.Command{
 		var amountInWei decimal.Decimal
 		if transferAmt == "all" {
 			// transfer all balance (only reserve some gas just pay for this tx) to target address
-			fromAddr := extractAddressFromPrivateKey(buildPrivateKeyFromHex(transferPrivateKeyHex))
+			fromAddr := extractAddressFromPrivateKey(buildPrivateKeyFromHex(privateKeyOpt))
 			balance, err := client.BalanceAt(ctx, fromAddr, nil)
 			checkErr(err)
 
@@ -118,68 +117,12 @@ var transferCmd = &cobra.Command{
 			amountInWei = unify2Wei(amount, transferUnit)
 		}
 
-		if tx, err := TransferHelper(client, transferPrivateKeyHex, transferTargetAddr, amountInWei.BigInt(), gasPrice, transferHexData); err != nil {
+		if tx, err := TransferHelper(client, privateKeyOpt, transferTargetAddr, amountInWei.BigInt(), gasPrice, transferHexData); err != nil {
 			log.Fatalf("transfer fail: %v", err)
 		} else {
 			log.Printf("transfer finished, tx = %v", tx)
 		}
 	},
-}
-
-
-func Transfer(client *ethclient.Client, privateKey *ecdsa.PrivateKey, toAddress common.Address, amount *big.Int, gasPrice *big.Int, data []byte) (string, error) {
-	fromAddress := extractAddressFromPrivateKey(privateKey)
-
-	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
-	if err != nil {
-		return "", fmt.Errorf("PendingNonceAt fail: %w", err)
-	}
-
-	isContract, err := isContractAddress(client, toAddress)
-	if err != nil {
-		return "", fmt.Errorf("isContractAddress fail: %w", err)
-	}
-
-	gasLimit := uint64(gasUsedByTransferEth)
-	if isContract { // gasUsedByTransferEth may be not enough if send to contract
-		gasLimit = 900000
-	}
-	if len(data) > 0 { // gasUsedByTransferEth may be not enough if with payload data
-		gasLimit = 900000
-	}
-
-	tx := types.NewTransaction(nonce, toAddress, amount, gasLimit, gasPrice, data)
-
-	chainID, err := client.NetworkID(context.Background())
-	if err != nil {
-		return "", fmt.Errorf("NetworkID fail: %w", err)
-	}
-
-	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
-	if err != nil {
-		return "", fmt.Errorf("SignTx fail: %w", err)
-	}
-
-	err = client.SendTransaction(context.Background(), signedTx)
-	if err != nil {
-		return "", fmt.Errorf("SendTransaction fail: %w", err)
-	}
-
-	if transferNotCheck {
-		return signedTx.Hash().String(), nil
-	}
-	//log.Printf("tx sent: %s", signedTx.Hash().Hex())
-
-	rp, err := getReceipt(client, signedTx.Hash(), 0)
-	if err != nil {
-		return "", fmt.Errorf("getReceipt fail: %w", err)
-	}
-
-	if rp.Status != types.ReceiptStatusSuccessful {
-		return "", fmt.Errorf("tx (%v) fail", signedTx.Hash().String())
-	}
-
-	return signedTx.Hash().String(), nil
 }
 
 func TransferHelper(client *ethclient.Client, privateKeyHex string, toAddress string, amountInWei *big.Int, gasPrice *big.Int, data []byte) (string, error) {
@@ -188,5 +131,5 @@ func TransferHelper(client *ethclient.Client, privateKeyHex string, toAddress st
 		amountInWei.String(),
 		extractAddressFromPrivateKey(buildPrivateKeyFromHex(privateKeyHex)).String(),
 		toAddress)
-	return Transfer(client, buildPrivateKeyFromHex(privateKeyHex), common.HexToAddress(toAddress), amountInWei, gasPrice, data)
+	return Transact(client, buildPrivateKeyFromHex(privateKeyHex), common.HexToAddress(toAddress), amountInWei, gasPrice, data)
 }

@@ -9,13 +9,15 @@ GO111MODULE=on go install github.com/10gic/ethutil
 # Usage
 ```txt
 $ ethutil --help
-An Ethereum util, can transfer eth, check balance, drop pending tx, etc
+An Ethereum util, can transfer eth, check balance, drop pending tx, call any contract function etc
 
 Usage:
   ethutil [command]
 
 Available Commands:
   check-balance   Check eth balance for address
+  contract-call   Invokes the (paid) contract method
+  contract-query  Invokes the (constant) contract method
   drop-pending-tx Drop pending tx for address
   dump-address    Dump address from private private key
   gen-private-key Generate eth private key
@@ -23,11 +25,12 @@ Available Commands:
   transfer        Transfer eth to another address
 
 Flags:
-      --gas-price string   the gas price, unit is gwei.
-  -h, --help               help for ethutil
-      --node string        mainnet | ropsten | kovan | rinkeby, the node type (default "mainnet")
-      --node-url string    the target connection node url, if this option specified, the --node option is ignored
-      --terse              produce terse output
+      --gas-price string     the gas price, unit is gwei.
+  -h, --help                 help for ethutil
+      --node string          mainnet | ropsten | kovan | rinkeby, the node type (default "kovan")
+      --node-url string      the target connection node url, if this option specified, the --node option is ignored
+  -k, --private-key string   the private key, eth would be send from this account
+      --terse                produce terse output
 
 Use "ethutil [command] --help" for more information about a command.
 ```
@@ -75,4 +78,16 @@ $ ethutil --terse gen-private-key -n 10
 0x639dbf9774a5e776e1edd0851aabfe0f58857fd2b0d2ecef20ef58dc071df20f 0x959be5AfAa1D5391DE38532f6d0a2b6ae9B761aa
 0x8da2192116916e8137d886f24b5fc98ef9a92c4a497ad1a728b8ac89381b307d 0x9355FF732be0e42eEa303C8F22Cd68d50D109549
 0x69d5b18f0f6a17b5b0d8b9d5ddc4531d6a14d023b789c4b3d753e40562254a1b 0x8F36975cdeA2e6E64f85719788C8EFBBe89DFBbb
+```
+
+Invokes the (paid) contract method:
+```shell
+$ ethutil --node mainnet --private-key 0xXXX contract-call 0xdac17f958d2ee523a2206206994597c13d831ec7 'transfer(address, uint256)' 0x8F36975cdeA2e6E64f85719788C8EFBBe89DFBbb 1000000
+ret0 = 1100000000000
+```
+
+Invokes the (constant) contract method:
+```shell
+$ ethutil --node mainnet contract-query 0xdac17f958d2ee523a2206206994597c13d831ec7 'balanceOf(address) returns (uint256)' 0x703662e526d2b71944fbfb9d87f61de3e0f0f290
+ret0 = 1100000000000
 ```

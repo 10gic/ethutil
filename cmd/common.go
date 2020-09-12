@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -162,4 +163,68 @@ func getGasPriceFromEthgasstation() (*big.Int, error) {
 	// we use Average
 	gasPrice := big.NewInt(int64(gasStationPrice.Average * 100000000))
 	return gasPrice, nil
+}
+
+// Transact invokes the (paid) contract method.
+func Transact(client *ethclient.Client, privateKey *ecdsa.PrivateKey, toAddress common.Address, amount *big.Int, gasPrice *big.Int, data []byte) (string, error) {
+	fromAddress := extractAddressFromPrivateKey(privateKey)
+
+	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
+	if err != nil {
+		return "", fmt.Errorf("PendingNonceAt fail: %w", err)
+	}
+
+	isContract, err := isContractAddress(client, toAddress)
+	if err != nil {
+		return "", fmt.Errorf("isContractAddress fail: %w", err)
+	}
+
+	gasLimit := uint64(gasUsedByTransferEth)
+	if isContract { // gasUsedByTransferEth may be not enough if send to contract
+		gasLimit = 900000
+	}
+	if len(data) > 0 { // gasUsedByTransferEth may be not enough if with payload data
+		gasLimit = 900000
+	}
+
+	tx := types.NewTransaction(nonce, toAddress, amount, gasLimit, gasPrice, data)
+
+	chainID, err := client.NetworkID(context.Background())
+	if err != nil {
+		return "", fmt.Errorf("NetworkID fail: %w", err)
+	}
+
+	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
+	if err != nil {
+		return "", fmt.Errorf("SignTx fail: %w", err)
+	}
+
+	err = client.SendTransaction(context.Background(), signedTx)
+	if err != nil {
+		return "", fmt.Errorf("SendTransaction fail: %w", err)
+	}
+
+	if transferNotCheck {
+		return signedTx.Hash().String(), nil
+	}
+	//log.Printf("tx sent: %s", signedTx.Hash().Hex())
+
+	rp, err := getReceipt(client, signedTx.Hash(), 0)
+	if err != nil {
+		return "", fmt.Errorf("getReceipt fail: %w", err)
+	}
+
+	if rp.Status != types.ReceiptStatusSuccessful {
+		return "", fmt.Errorf("tx (%v) fail", signedTx.Hash().String())
+	}
+
+	return signedTx.Hash().String(), nil
+}
+
+// Call invokes the (constant) contract method.
+func Call(client *ethclient.Client, toAddress common.Address, data []byte) ([]byte, error) {
+	opts := new(bind.CallOpts)
+	msg := ethereum.CallMsg{From: opts.From, To: &toAddress, Data: data}
+	ctx := context.TODO()
+	return client.CallContract(ctx, msg, nil)
 }

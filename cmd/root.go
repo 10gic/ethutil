@@ -11,6 +11,7 @@ var (
 	nodeUrlOpt     string
 	nodeOpt        string
 	gasPriceOpt    string
+	privateKeyOpt  string
 	terseOutputOpt bool
 	rootCmd        = &cobra.Command{
 		Use:   "ethutil",
@@ -39,8 +40,9 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVarP(&nodeUrlOpt, "node-url", "", "", "the target connection node url, if this option specified, the --node option is ignored")
-	rootCmd.PersistentFlags().StringVarP(&nodeOpt, "node", "", "mainnet", "mainnet | ropsten | kovan | rinkeby, the node type")
+	rootCmd.PersistentFlags().StringVarP(&nodeOpt, "node", "", "kovan", "mainnet | ropsten | kovan | rinkeby, the node type")
 	rootCmd.PersistentFlags().StringVarP(&gasPriceOpt, "gas-price", "", "", "the gas price, unit is gwei.")
+	rootCmd.PersistentFlags().StringVarP(&privateKeyOpt, "private-key", "k", "", "the private key, eth would be send from this account")
 	rootCmd.PersistentFlags().BoolVarP(&terseOutputOpt, "terse", "", false, "produce terse output")
 
 	rootCmd.AddCommand(balanceCmd)
@@ -48,6 +50,8 @@ func init() {
 	rootCmd.AddCommand(dropPendingTxCmd)
 	rootCmd.AddCommand(genkeyCmd)
 	rootCmd.AddCommand(dumpAddrCmd)
+	rootCmd.AddCommand(callCmd)
+	rootCmd.AddCommand(queryCmd)
 }
 
 func initConfig() {
