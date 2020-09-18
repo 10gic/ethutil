@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"crypto/ecdsa"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/ethereum/go-ethereum"
@@ -49,6 +50,26 @@ func isContractAddress(client *ethclient.Client, address common.Address) (bool, 
 
 	isContract := len(bytecode) > 0
 	return isContract, nil
+}
+
+func has0xPrefix(str string) bool {
+	return len(str) >= 2 && str[0] == '0' && (str[1] == 'x' || str[1] == 'X')
+}
+
+func isValidHexString(str string) bool {
+	if str == "" {
+		return true
+	}
+	var hexWithout0x = str
+	if has0xPrefix(str) {
+		hexWithout0x = str[2:]
+	}
+	_, err := hex.DecodeString(hexWithout0x)
+	if err != nil {
+		return false
+	}
+
+	return true
 }
 
 func bigInt2Decimal(x *big.Int) decimal.Decimal {

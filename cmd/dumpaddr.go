@@ -17,7 +17,7 @@ func init() {
 var dumpAddrCmd = &cobra.Command{
 	Use:   "dump-address",
 	Aliases: []string{"dump-addr"},
-	Short: "Dump address from private private key",
+	Short: "Dump address from private key",
 	Run: func(cmd *cobra.Command, args []string) {
 
 		for _, dumpAddrPrivateKeyHexStr := range dumpAddrPrivateKeys {

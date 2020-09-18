@@ -1,5 +1,5 @@
 # ethutil
-An Ethereum util, can transfer eth, check balance, drop pending tx, call any contract function etc
+An Ethereum util, can transfer eth, check balance, drop pending tx, dump address from private key, call any contract function etc
 
 # Install
 ```shell
@@ -15,14 +15,15 @@ Usage:
   ethutil [command]
 
 Available Commands:
-  check-balance   Check eth balance for address
-  contract-call   Invokes the (paid) contract method
-  contract-query  Invokes the (constant) contract method
-  drop-pending-tx Drop pending tx for address
-  dump-address    Dump address from private private key
-  gen-private-key Generate eth private key
-  help            Help about any command
-  transfer        Transfer eth to another address
+  check-balance         Check eth balance for address
+  compute-contract-addr Compute contract address before deployment
+  contract-call         Invokes the (paid) contract method
+  contract-query        Invokes the (constant) contract method
+  drop-pending-tx       Drop pending tx for address
+  dump-address          Dump address from private key
+  gen-private-key       Generate eth private key
+  help                  Help about any command
+  transfer              Transfer eth to another address
 
 Flags:
       --gas-price string     the gas price, unit is gwei.
@@ -89,4 +90,21 @@ Invokes the (constant) contract method:
 ```shell
 $ ethutil --node mainnet contract-query 0xdac17f958d2ee523a2206206994597c13d831ec7 'balanceOf(address) returns (uint256)' 0x703662e526d2b71944fbfb9d87f61de3e0f0f290
 ret0 = 1100000000000
+```
+
+Compute contract address before deployment:
+```shell
+$ ethutil compute-contract-addr --deployer-addr 0x8F36975cdeA2e6E64f85719788C8EFBBe89DFBbb --nonce 0
+deployer address 0x8F36975cdeA2e6E64f85719788C8EFBBe89DFBbb
+nonce 0
+contract address 0x3bb8C061Ec6EdB3E78777b983b96468CC4799888 
+```
+
+Compute contract address (CREATE2) before deployment:
+```shell
+$ ethutil compute-contract-addr --deployer-addr 0x0000000000000000000000000000000000000000 --salt 0x0000000000000000000000000000000000000000000000000000000000000000 --init-code 0x00
+deployer address 0x0000000000000000000000000000000000000000
+salt 0x0000000000000000000000000000000000000000000000000000000000000000
+init code 0x00
+contract address 0x4D1A2e2bB4F88F0250f26Ffff098B0b30B26BF38
 ```

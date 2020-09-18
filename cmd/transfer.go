@@ -15,14 +15,14 @@ var transferTargetAddr string
 var transferUnit string
 var transferAmt string
 var transferNotCheck bool
-var transferHexData []byte
+var transferHexData string
 
 func init() {
 	transferCmd.Flags().StringVarP(&transferTargetAddr, "to-addr", "t", "", "the target address you want to transfer eth")
 	transferCmd.Flags().StringVarP(&transferUnit, "unit", "u", "ether", "wei | gwei | ether, unit of amount")
 	transferCmd.Flags().StringVarP(&transferAmt, "amount", "n", "", "the amount you want to transfer, special word \"all\" means all balance would transfer to target address, unit is specified by --unit")
 	transferCmd.Flags().BoolVarP(&transferNotCheck, "not-check", "", false, "don't check result, return immediately after send transaction")
-	transferCmd.Flags().BytesHexVarP(&transferHexData, "hex-data", "", nil, "the payload hex data when transfer, please remove the leading 0x")
+	transferCmd.Flags().StringVarP(&transferHexData, "hex-data", "", "", "the payload hex data when transfer")
 
 	transferCmd.MarkFlagRequired("to-addr")
 	transferCmd.MarkFlagRequired("amount")
@@ -42,6 +42,11 @@ func validationTransferCmdOpts() bool {
 
 	if privateKeyOpt == "" {
 		log.Fatalf("--private-key is required for transfer command")
+		return false
+	}
+
+	if !isValidHexString(transferHexData) {
+		log.Fatalf("--hex-data must hex string")
 		return false
 	}
 
@@ -117,7 +122,7 @@ var transferCmd = &cobra.Command{
 			amountInWei = unify2Wei(amount, transferUnit)
 		}
 
-		if tx, err := TransferHelper(client, privateKeyOpt, transferTargetAddr, amountInWei.BigInt(), gasPrice, transferHexData); err != nil {
+		if tx, err := TransferHelper(client, privateKeyOpt, transferTargetAddr, amountInWei.BigInt(), gasPrice, common.FromHex(transferHexData)); err != nil {
 			log.Fatalf("transfer fail: %v", err)
 		} else {
 			log.Printf("transfer finished, tx = %v", tx)

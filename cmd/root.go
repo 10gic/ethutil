@@ -52,6 +52,7 @@ func init() {
 	rootCmd.AddCommand(dumpAddrCmd)
 	rootCmd.AddCommand(callCmd)
 	rootCmd.AddCommand(queryCmd)
+	rootCmd.AddCommand(computeContractAddrCmd)
 }
 
 func initConfig() {
