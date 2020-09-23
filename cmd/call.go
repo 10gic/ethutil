@@ -164,6 +164,13 @@ func parseFuncSignature(input string) (string, []string, error) {
 			return "", nil, fmt.Errorf("signature `%v` invalid, type missing in args", input)
 		}
 		args[index] = typeNormalize(fields[0]) // first field is type. for example, "uint256 xx", first field is uint256
+
+		if len(fields) >= 2 && fields[0] == "address" && strings.HasPrefix(fields[1], "payable[") {
+			// handle case:
+			// f1(address payable[] memory a, uint256 b)
+			// f1(address payable[3] memory a, uint256 b)
+			args[index] = strings.Replace(fields[1], "payable", "address", 1) // address[] or address[3]
+		}
 	}
 
 	return funcName, args, nil
