@@ -23,12 +23,14 @@ const nodeMainnet = "mainnet"
 const nodeRopsten = "ropsten"
 const nodeKovan = "kovan"
 const nodeRinkeby = "rinkeby"
+const nodeSokol = "sokol"
 
 var nodeUrlMap = map[string]string{
 	nodeMainnet: "wss://mainnet.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472", // please replace it
 	nodeRopsten: "wss://ropsten.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472", // please replace it
 	nodeKovan:   "wss://kovan.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472",   // please replace it
 	nodeRinkeby: "wss://rinkeby.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472", // please replace it
+	nodeSokol:   "https://sokol.poa.network",
 }
 
 // Execute cobra root command
@@ -40,7 +42,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVarP(&nodeUrlOpt, "node-url", "", "", "the target connection node url, if this option specified, the --node option is ignored")
-	rootCmd.PersistentFlags().StringVarP(&nodeOpt, "node", "", "kovan", "mainnet | ropsten | kovan | rinkeby, the node type")
+	rootCmd.PersistentFlags().StringVarP(&nodeOpt, "node", "", "kovan", "mainnet | ropsten | kovan | rinkeby | sokol, the node type")
 	rootCmd.PersistentFlags().StringVarP(&gasPriceOpt, "gas-price", "", "", "the gas price, unit is gwei.")
 	rootCmd.PersistentFlags().StringVarP(&privateKeyOpt, "private-key", "k", "", "the private key, eth would be send from this account")
 	rootCmd.PersistentFlags().BoolVarP(&terseOutputOpt, "terse", "", false, "produce terse output")
@@ -67,7 +69,7 @@ func initConfig() {
 	checkErr(err)
 
 	// validation
-	if !contains([]string{nodeMainnet, nodeRopsten, nodeKovan, nodeRinkeby}, nodeOpt) {
+	if !contains([]string{nodeMainnet, nodeRopsten, nodeKovan, nodeRinkeby, nodeSokol}, nodeOpt) {
 		log.Printf("invalid option for --node: %v", nodeOpt)
 		rootCmd.Help()
 		os.Exit(1)
