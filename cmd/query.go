@@ -54,9 +54,24 @@ var queryCmd = &cobra.Command{
 		checkErr(err)
 
 		for _, returnArg := range returnArgs {
+			// fmt.Printf("type of v: %v\n", reflect.TypeOf(v[returnArg.Name]))
 			if returnArg.Type.T == abi.AddressTy {
-				// fmt.Printf("type of v: %v\n", reflect.TypeOf(v[returnArg.Name]))
 				fmt.Printf("%v = %v\n", returnArg.Name, v[returnArg.Name].(common.Address).Hex())
+			} else if returnArg.Type.T == abi.SliceTy {
+				if returnArg.Type.Elem.T == abi.AddressTy { // element is address
+					addresses := v[returnArg.Name].([]common.Address)
+
+					fmt.Printf("%v = [", returnArg.Name)
+					for index, address := range addresses {
+						fmt.Printf("%v", address.Hex())
+						if index < len(addresses) - 1 {
+							fmt.Printf(" ") // separator
+						}
+					}
+					fmt.Printf("]")
+				} else {
+					fmt.Printf("%v = %v\n", returnArg.Name, v[returnArg.Name])
+				}
 			} else {
 				fmt.Printf("%v = %v\n", returnArg.Name, v[returnArg.Name])
 			}
@@ -109,7 +124,14 @@ func buildReturnArgs(funcDefinition string) (abi.Arguments, error) {
 
 		theReturnName := "ret"+ strconv.FormatInt(int64(index),10) // default name ret0, ret1, etc
 		if len(fields) > 1 {
-			theReturnName = fields[1]
+			if fields[1] == "memory" || fields[1] == "calldata" {
+				// skip keyword "memory" and "calldata"
+				if len(fields) > 2 {
+					theReturnName = fields[2]
+				}
+			} else {
+				theReturnName = fields[1]
+			}
 		}
 		theReturnTypes = append(theReturnTypes, abi.Argument{Type: typ, Name: theReturnName})
 	}
