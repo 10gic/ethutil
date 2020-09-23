@@ -6,11 +6,18 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/spf13/cobra"
+	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
 	"strings"
 )
+
+var queryCmdABIFile string
+
+func init() {
+	queryCmd.Flags().StringVarP(&queryCmdABIFile, "abi-file", "", "", "the path of abi file, if this option specified, 'function definition' can be just function name")
+}
 
 var queryCmd = &cobra.Command{
 	Use:   "contract-query contract_address 'function definition' arg1 arg2 ...",
@@ -37,6 +44,17 @@ var queryCmd = &cobra.Command{
 			log.Printf("%v is NOT a contract address", contractAddr)
 			cmd.Help()
 			os.Exit(1)
+		}
+
+		if queryCmdABIFile != "" {
+			abiContent, err := ioutil.ReadFile(queryCmdABIFile)
+			if err != nil {
+				log.Fatal(err)
+			}
+			funcName := funcDefinition
+			funcDefinition, err = extractFuncDefinition(string(abiContent), extractFuncName(funcName))
+			checkErr(err)
+			// log.Printf("extract func definition from abi: %v", funcDefinition)
 		}
 
 		txData, err := buildTxData(funcDefinition, inputArgData)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/csv"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -11,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/spf13/cobra"
 	"io"
+	"io/ioutil"
 	"log"
 	"math/big"
 	"os"
@@ -18,6 +20,12 @@ import (
 	"strconv"
 	"strings"
 )
+
+var callCmdABIFile string
+
+func init() {
+	callCmd.Flags().StringVarP(&callCmdABIFile, "abi-file", "", "", "the path of abi file, if this option specified, 'function signature' can be just function name")
+}
 
 var callCmd = &cobra.Command{
 	Use:   "contract-call contract_address 'function signature' arg1 arg2 ...",
@@ -44,6 +52,17 @@ var callCmd = &cobra.Command{
 			log.Printf("%v is NOT a contract address", contractAddr)
 			cmd.Help()
 			os.Exit(1)
+		}
+
+		if callCmdABIFile != "" {
+			abiContent, err := ioutil.ReadFile(callCmdABIFile)
+			if err != nil {
+				log.Fatal(err)
+			}
+			funcName := funcSignature
+			funcSignature, err = extractFuncDefinition(string(abiContent), extractFuncName(funcName))
+			checkErr(err)
+			// log.Printf("extract func definition from abi: %v", funcSignature)
 		}
 
 		txData, err := buildTxData(funcSignature, inputArgData)
@@ -96,6 +115,25 @@ func buildTxData(funcSignature string, inputArgData []string) ([]byte, error) {
 	return append(functionSelector, data...), nil
 }
 
+// input example:
+// fun1
+// fun1(uint256)
+// function fun1
+// function fun1(uint256)
+func extractFuncName(input string) string {
+	if strings.HasPrefix(input, "function ") {
+		input = input[len("function "):] // remove leading string "function "
+	}
+	funcName := strings.TrimLeft(input, " ")
+
+	leftParenthesisLoc := strings.Index(funcName, "(")
+	if leftParenthesisLoc >= 0 { // ( found
+		funcName := funcName[:leftParenthesisLoc] // remove all characters from char '('
+		funcName = strings.TrimSpace(funcName)
+	}
+	return funcName
+}
+
 // input example: "function add(uint256   xx, address xx, bool xx)"
 // output "add, [uint256 address bool]"
 func parseFuncSignature(input string) (string, []string, error) {
@@ -106,7 +144,7 @@ func parseFuncSignature(input string) (string, []string, error) {
 
 	leftParenthesisLoc := strings.Index(input, "(")
 	if leftParenthesisLoc < 0 {
-		return "", nil, fmt.Errorf("char ) is not found in function signature")
+		return "", nil, fmt.Errorf("char ( is not found in function signature")
 	}
 	funcName := input[:leftParenthesisLoc] // remove all characters from char '('
 	funcName = strings.TrimSpace(funcName)
@@ -702,4 +740,124 @@ func parseArrayData(input string) ([]string, error) {
 func typeNormalize(input string) string {
 	re := regexp.MustCompile(`\b([u]int)\b`)
 	return re.ReplaceAllString(input, "${1}256")
+}
+
+// ABI example:
+// [
+//	{
+//		"inputs": [
+//			{
+//				"internalType": "uint256[]",
+//				"name": "_a",
+//				"type": "uint256[]"
+//			},
+//			{
+//				"internalType": "address[]",
+//				"name": "_addr",
+//				"type": "address[]"
+//			}
+//		],
+//		"name": "f1",
+//		"outputs": [],
+//		"stateMutability": "nonpayable",
+//		"type": "function"
+//	},
+//	{
+//		"inputs": [],
+//		"name": "f2",
+//		"outputs": [
+//			{
+//				"internalType": "uint256",
+//				"name": "",
+//				"type": "uint256"
+//			}
+//		],
+//		"stateMutability": "view",
+//		"type": "function"
+//	},
+// ......
+// ]
+type AbiData struct {
+	Inputs []struct{
+		Name string `json:"name"`
+		Type string `json:"type"`
+	} `json:"inputs"`
+	Name string `json:"name"`
+	Type string `json:"type"`
+	Outputs []struct{
+		Name string `json:"name"`
+		Type string `json:"type"`
+	} `json:"outputs"`
+}
+
+type AbiJSONData struct {
+	ABI []AbiData `json:"abi"`
+}
+
+func extractFuncDefinition(abi string, funcName string) (string, error) {
+	// log.Printf("abi = %s\nfuncName = %s", abi, funcName)
+	abi = strings.TrimSpace(abi)
+	if len(abi) == 0 {
+		return "", fmt.Errorf("abi is empty")
+	}
+
+	var parsedABI []AbiData
+
+	if abi[0:1] == "[" {
+		if err := json.Unmarshal([]byte(abi), &parsedABI); err != nil {
+			return "", fmt.Errorf("unmarshal fail: %w", err)
+		}
+	} else if abi[0:1] == "{" {
+		var abiJSONData AbiJSONData
+		if err := json.Unmarshal([]byte(abi), &abiJSONData); err != nil {
+			return "", fmt.Errorf("unmarshal fail: %w", err)
+		}
+		parsedABI = abiJSONData.ABI
+	} else {
+		return "", fmt.Errorf("abi invalid")
+	}
+
+	var ret = funcName + "("
+
+	if len(parsedABI) == 0 {
+		return "", fmt.Errorf("parsedABI is empty")
+	}
+
+	var foundFunc = false
+	for _, item := range parsedABI {
+		if item.Type == "function" && item.Name == funcName {
+			foundFunc = true
+			for index, input := range item.Inputs {
+				ret += input.Type
+
+				if index < len(item.Inputs) - 1 { // not the last input
+					ret += ", "
+				}
+			}
+
+			ret += ")"
+
+			if len(item.Outputs) > 0 {
+				ret += " returns ("
+				for index, output := range item.Outputs {
+					ret += output.Type
+
+					if index < len(item.Outputs)-1 { // not the last input
+						ret += ", "
+					}
+				}
+
+				ret += ")"
+			}
+
+			break
+		}
+	}
+
+	if ! foundFunc {
+		return "", fmt.Errorf("function %v not found in ABI", funcName)
+	}
+
+	// Example of ret: `f1(uint256[], address[]) returns (uint256)`
+	return ret, nil
 }

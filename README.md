@@ -28,7 +28,7 @@ Available Commands:
 Flags:
       --gas-price string     the gas price, unit is gwei.
   -h, --help                 help for ethutil
-      --node string          mainnet | ropsten | kovan | rinkeby, the node type (default "kovan")
+      --node string          mainnet | ropsten | kovan | rinkeby | sokol, the node type (default "kovan")
       --node-url string      the target connection node url, if this option specified, the --node option is ignored
   -k, --private-key string   the private key, eth would be send from this account
       --terse                produce terse output
@@ -86,10 +86,20 @@ Invokes the (paid) contract method:
 $ ethutil --node mainnet --private-key 0xXXX contract-call 0xdac17f958d2ee523a2206206994597c13d831ec7 'transfer(address, uint256)' 0x8F36975cdeA2e6E64f85719788C8EFBBe89DFBbb 1000000
 ```
 
+Invokes the (paid) contract method with abi file:
+```shell
+$ ethutil --node mainnet --private-key 0xXXX contract-call 0xdac17f958d2ee523a2206206994597c13d831ec7 --abi-file path/to/abi transfer 0x8F36975cdeA2e6E64f85719788C8EFBBe89DFBbb 1000000
+```
+
 Invokes the (constant) contract method:
 ```shell
 $ ethutil --node mainnet contract-query 0xdac17f958d2ee523a2206206994597c13d831ec7 'balanceOf(address) returns (uint256)' 0x703662e526d2b71944fbfb9d87f61de3e0f0f290
 ret0 = 1100000000000
+```
+
+Invokes the (constant) contract method with abi file:
+```shell
+$ ethutil --node mainnet contract-query 0xdac17f958d2ee523a2206206994597c13d831ec7 --abi-file path/to/abi balanceOf 0x703662e526d2b71944fbfb9d87f61de3e0f0f290
 ```
 
 Compute contract address before deployment:
