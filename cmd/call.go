@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
 	"io"
 	"io/ioutil"
@@ -22,9 +23,13 @@ import (
 )
 
 var callCmdABIFile string
+var callCmdTransferUnit string
+var callCmdTransferAmt string
 
 func init() {
 	callCmd.Flags().StringVarP(&callCmdABIFile, "abi-file", "", "", "the path of abi file, if this option specified, 'function signature' can be just function name")
+	callCmd.Flags().StringVarP(&callCmdTransferUnit, "unit", "u", "ether", "wei | gwei | ether, unit of amount")
+	callCmd.Flags().StringVarP(&callCmdTransferAmt, "amount", "n", "0", "the amount you want to transfer when call contract, unit is specified by --unit")
 }
 
 var callCmd = &cobra.Command{
@@ -74,13 +79,12 @@ var callCmd = &cobra.Command{
 
 		if privateKeyOpt == "" {
 			log.Fatalf("--private-key is required for contract-call command")
-
-			output, err := Call(client, common.HexToAddress(contractAddr), txData)
-			checkErr(err)
-
-			fmt.Printf("output:\n%s\n", hex.Dump(output))
 		} else {
-			tx, err := Transact(client, buildPrivateKeyFromHex(privateKeyOpt), common.HexToAddress(contractAddr), big.NewInt(0), gasPrice, txData)
+			var amount = decimal.RequireFromString(callCmdTransferAmt)
+			var amountInWei = unify2Wei(amount, callCmdTransferUnit)
+
+			var contract = common.HexToAddress(contractAddr)
+			tx, err := Transact(client, buildPrivateKeyFromHex(privateKeyOpt), &contract, amountInWei.BigInt(), gasPrice, txData)
 			checkErr(err)
 
 			log.Printf("transaction %s finished", tx)
@@ -751,6 +755,11 @@ func typeNormalize(input string) string {
 
 // ABI example:
 // [
+//  {
+//      "inputs": [],
+//      "stateMutability": "nonpayable",
+//      "type": "constructor"
+//  },
 //	{
 //		"inputs": [
 //			{
@@ -790,7 +799,7 @@ type AbiData struct {
 		Type string `json:"type"`
 	} `json:"inputs"`
 	Name string `json:"name"`
-	Type string `json:"type"`
+	Type string `json:"type"` // constructor, function, etc.
 	Outputs []struct{
 		Name string `json:"name"`
 		Type string `json:"type"`
@@ -832,8 +841,16 @@ func extractFuncDefinition(abi string, funcName string) (string, error) {
 
 	var foundFunc = false
 	for _, item := range parsedABI {
-		if item.Type == "function" && item.Name == funcName {
-			foundFunc = true
+		if funcName == "constructor" { // constructor
+			if item.Type == "constructor" {
+				foundFunc = true
+			}
+		} else { // normal function
+			if item.Type == "function" && item.Name == funcName {
+				foundFunc = true
+			}
+		}
+		if foundFunc == true {
 			for index, input := range item.Inputs {
 				ret += input.Type
 

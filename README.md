@@ -18,6 +18,7 @@ Available Commands:
   check-balance         Check eth balance for address
   compute-contract-addr Compute contract address before deployment
   contract-call         Invokes the (paid) contract method
+  contract-deploy       Deploy contract
   contract-query        Invokes the (constant) contract method
   drop-pending-tx       Drop pending tx for address
   dump-address          Dump address from private key
@@ -26,6 +27,7 @@ Available Commands:
   transfer              Transfer eth to another address
 
 Flags:
+      --gas-limit uint       the gas limit
       --gas-price string     the gas price, unit is gwei.
   -h, --help                 help for ethutil
       --node string          mainnet | ropsten | kovan | rinkeby | sokol, the node type (default "kovan")
@@ -79,6 +81,11 @@ $ ethutil --terse gen-private-key -n 10
 0x639dbf9774a5e776e1edd0851aabfe0f58857fd2b0d2ecef20ef58dc071df20f 0x959be5AfAa1D5391DE38532f6d0a2b6ae9B761aa
 0x8da2192116916e8137d886f24b5fc98ef9a92c4a497ad1a728b8ac89381b307d 0x9355FF732be0e42eEa303C8F22Cd68d50D109549
 0x69d5b18f0f6a17b5b0d8b9d5ddc4531d6a14d023b789c4b3d753e40562254a1b 0x8F36975cdeA2e6E64f85719788C8EFBBe89DFBbb
+```
+
+Deploy a contract:
+```shell
+$ ethutil --private-key 0xXXX contract-deploy --bin-file contract-bytecode.bin
 ```
 
 Invokes the (paid) contract method:

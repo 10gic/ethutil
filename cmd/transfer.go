@@ -136,5 +136,6 @@ func TransferHelper(client *ethclient.Client, privateKeyHex string, toAddress st
 		amountInWei.String(),
 		extractAddressFromPrivateKey(buildPrivateKeyFromHex(privateKeyHex)).String(),
 		toAddress)
-	return Transact(client, buildPrivateKeyFromHex(privateKeyHex), common.HexToAddress(toAddress), amountInWei, gasPrice, data)
+	var toAddr = common.HexToAddress(toAddress)
+	return Transact(client, buildPrivateKeyFromHex(privateKeyHex), &toAddr, amountInWei, gasPrice, data)
 }

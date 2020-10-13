@@ -187,7 +187,7 @@ func getGasPriceFromEthgasstation() (*big.Int, error) {
 }
 
 // Transact invokes the (paid) contract method.
-func Transact(client *ethclient.Client, privateKey *ecdsa.PrivateKey, toAddress common.Address, amount *big.Int, gasPrice *big.Int, data []byte) (string, error) {
+func Transact(client *ethclient.Client, privateKey *ecdsa.PrivateKey, toAddress *common.Address, amount *big.Int, gasPrice *big.Int, data []byte) (string, error) {
 	fromAddress := extractAddressFromPrivateKey(privateKey)
 
 	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
@@ -195,20 +195,33 @@ func Transact(client *ethclient.Client, privateKey *ecdsa.PrivateKey, toAddress 
 		return "", fmt.Errorf("PendingNonceAt fail: %w", err)
 	}
 
-	isContract, err := isContractAddress(client, toAddress)
-	if err != nil {
-		return "", fmt.Errorf("isContractAddress fail: %w", err)
+	gasLimit := gasLimitOpt
+	if gasLimit == 0 { // if user not specified
+		gasLimit = uint64(gasUsedByTransferEth)
+
+		if toAddress == nil {
+			gasLimit = 7000000 // the default gas limit for deploy contract, can be overwrite by option
+		} else {
+			isContract, err := isContractAddress(client, *toAddress)
+			if err != nil {
+				return "", fmt.Errorf("isContractAddress fail: %w", err)
+			}
+			if isContract { // gasUsedByTransferEth may be not enough if send to contract
+				gasLimit = 900000
+			}
+			if len(data) > 0 { // gasUsedByTransferEth may be not enough if with payload data
+				gasLimit = 900000
+			}
+		}
 	}
 
-	gasLimit := uint64(gasUsedByTransferEth)
-	if isContract { // gasUsedByTransferEth may be not enough if send to contract
-		gasLimit = 900000
+	var tx *types.Transaction
+	if toAddress == nil {
+		// send data to null address means deploy contract
+		tx = types.NewContractCreation(nonce, amount, gasLimit, gasPrice, data)
+	} else {
+		tx = types.NewTransaction(nonce, *toAddress, amount, gasLimit, gasPrice, data)
 	}
-	if len(data) > 0 { // gasUsedByTransferEth may be not enough if with payload data
-		gasLimit = 900000
-	}
-
-	tx := types.NewTransaction(nonce, toAddress, amount, gasLimit, gasPrice, data)
 
 	chainID, err := client.NetworkID(context.Background())
 	if err != nil {
@@ -235,6 +248,9 @@ func Transact(client *ethclient.Client, privateKey *ecdsa.PrivateKey, toAddress 
 		return "", fmt.Errorf("getReceipt fail: %w", err)
 	}
 
+	if ! terseOutputOpt {
+		log.Printf(nodeTxLinkMap[nodeOpt] + signedTx.Hash().String())
+	}
 	if rp.Status != types.ReceiptStatusSuccessful {
 		return "", fmt.Errorf("tx (%v) fail", signedTx.Hash().String())
 	}
