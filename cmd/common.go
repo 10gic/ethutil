@@ -6,13 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/shopspring/decimal"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -20,6 +13,14 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/shopspring/decimal"
 )
 
 func contains(arr []string, str string) bool {
@@ -139,7 +140,7 @@ recheck:
 		return rp, nil
 	}
 
-	if timeout > 0 && beginTime.Add(timeout).After(time.Now()){
+	if timeout > 0 && beginTime.Add(timeout).After(time.Now()) {
 		// timeout
 		return nil, fmt.Errorf("GetReceipt timeout")
 	}
@@ -248,7 +249,7 @@ func Transact(client *ethclient.Client, privateKey *ecdsa.PrivateKey, toAddress 
 		return "", fmt.Errorf("getReceipt fail: %w", err)
 	}
 
-	if ! terseOutputOpt {
+	if !terseOutputOpt {
 		log.Printf(nodeTxLinkMap[nodeOpt] + signedTx.Hash().String())
 	}
 	if rp.Status != types.ReceiptStatusSuccessful {
@@ -264,4 +265,43 @@ func Call(client *ethclient.Client, toAddress common.Address, data []byte) ([]by
 	msg := ethereum.CallMsg{From: opts.From, To: &toAddress, Data: data}
 	ctx := context.TODO()
 	return client.CallContract(ctx, msg, nil)
+}
+
+func getRecoveryId(v *big.Int) int {
+	var recoveryId int
+	// Note: can be simplified by checking parity (i.e. odd-even)
+	if v.Int64() == 27 || v.Int64() == 28 { // v before bip155
+		recoveryId = int(v.Int64()) - 27
+	} else { // v after bip155
+		// derive chainId
+		var chainId = int((v.Int64() - 35) / 2)
+		// derive recoveryId
+		recoveryId = int(v.Int64()) - 35 - 2*chainId
+	}
+	return recoveryId
+}
+
+// Build a 65-byte compact ECDSA signature (containing the recovery id as the last element)
+func buildECDSASignature(v, r, s *big.Int) []byte {
+	var recoveryId = getRecoveryId(v)
+	// println("recoveryId", recoveryId)
+
+	var r_bytes = make([]byte, 32, 32)
+	var s_bytes = make([]byte, 32, 32)
+	copy(r_bytes[32-len(r.Bytes()):], r.Bytes())
+	copy(s_bytes[32-len(s.Bytes()):], s.Bytes())
+
+	var rs_bytes = append(r_bytes, s_bytes...)
+	return append(rs_bytes, byte(recoveryId))
+}
+
+// Recover public key, return 65 bytes uncompressed public key
+func RecoverPubkey(v, r, s *big.Int, msg []byte) ([]byte, error) {
+	signature := buildECDSASignature(v, r, s)
+
+	// recover public key from msg (hash of data) and ECDSA signature
+	// crypto.Ecrecover msg: 32 bytes hash
+	// crypto.Ecrecover signature: 65-byte compact ECDSA signature
+	// crypto.Ecrecover return 65 bytes uncompressed public key
+	return crypto.Ecrecover(msg, signature)
 }

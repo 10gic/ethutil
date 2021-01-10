@@ -1,10 +1,11 @@
 package cmd
 
 import (
-	"github.com/shopspring/decimal"
-	"github.com/spf13/cobra"
 	"log"
 	"os"
+
+	"github.com/shopspring/decimal"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -32,7 +33,7 @@ var nodeUrlMap = map[string]string{
 	nodeRopsten: "wss://ropsten.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472", // please replace it
 	nodeKovan:   "wss://kovan.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472",   // please replace it
 	nodeRinkeby: "wss://rinkeby.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472", // please replace it
-	nodeGoerli:  "wss://goerli.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472", // please replace it
+	nodeGoerli:  "wss://goerli.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472",  // please replace it
 	nodeSokol:   "https://sokol.poa.network",
 }
 
@@ -62,6 +63,7 @@ func init() {
 
 	rootCmd.AddCommand(balanceCmd)
 	rootCmd.AddCommand(transferCmd)
+	rootCmd.AddCommand(decodeRawTxCmd)
 	rootCmd.AddCommand(dropPendingTxCmd)
 	rootCmd.AddCommand(genkeyCmd)
 	rootCmd.AddCommand(dumpAddrCmd)
