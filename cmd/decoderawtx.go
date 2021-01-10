@@ -38,7 +38,10 @@ var decodeRawTxCmd = &cobra.Command{
 
 		var tx *types.Transaction
 		rawTxBytes, _ := hex.DecodeString(rawTxHexData)
-		rlp.DecodeBytes(rawTxBytes, &tx)
+		err := rlp.DecodeBytes(rawTxBytes, &tx)
+		if err != nil {
+			panic("rlp decode failed, may not a valid eth raw transaction")
+		}
 
 		fmt.Printf("basic info (see bip155):\n")
 		fmt.Printf("nonce = %d\n", tx.Nonce())
