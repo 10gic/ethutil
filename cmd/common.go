@@ -11,7 +11,6 @@ import (
 	"math/big"
 	"net/http"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
@@ -23,6 +22,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// contains returns true if array arr contains str.
 func contains(arr []string, str string) bool {
 	for _, a := range arr {
 		if a == str {
@@ -32,17 +32,20 @@ func contains(arr []string, str string) bool {
 	return false
 }
 
+// checkErr panic if err != nil.
 func checkErr(err error) {
 	if err != nil {
 		panic(err)
 	}
 }
 
+// isValidEthAddress returns true if v is a valid eth address.
 func isValidEthAddress(v string) bool {
 	var ethAddressRE = regexp.MustCompile("^0x[0-9a-fA-F]{40}$")
 	return ethAddressRE.MatchString(v)
 }
 
+// isContractAddress returns true if address is a valid eth contract address.
 func isContractAddress(client *ethclient.Client, address common.Address) (bool, error) {
 	bytecode, err := client.CodeAt(context.Background(), address, nil) // nil is latest block
 	if err != nil {
@@ -53,10 +56,12 @@ func isContractAddress(client *ethclient.Client, address common.Address) (bool, 
 	return isContract, nil
 }
 
+// has0xPrefix returns true if str starts with 0x or 0X.
 func has0xPrefix(str string) bool {
 	return len(str) >= 2 && str[0] == '0' && (str[1] == 'x' || str[1] == 'X')
 }
 
+// isValidHexString returns true if str is a valid hex string.
 func isValidHexString(str string) bool {
 	if str == "" {
 		return true
@@ -73,6 +78,7 @@ func isValidHexString(str string) bool {
 	return true
 }
 
+// bigInt2Decimal converts x from big.Int to decimal.Decimal.
 func bigInt2Decimal(x *big.Int) decimal.Decimal {
 	if x == nil {
 		return decimal.New(0, 0)
@@ -80,8 +86,10 @@ func bigInt2Decimal(x *big.Int) decimal.Decimal {
 	return decimal.NewFromBigInt(x, 0)
 }
 
+// buildPrivateKeyFromHex builds ecdsa.PrivateKey from hex string (the leading 0x is optional),
+// it would panic if input an invalid hex string.
 func buildPrivateKeyFromHex(privateKeyHex string) *ecdsa.PrivateKey {
-	if strings.HasPrefix(privateKeyHex, "0x") {
+	if has0xPrefix(privateKeyHex) {
 		privateKeyHex = privateKeyHex[2:] // remove leading 0x
 	}
 
@@ -91,6 +99,7 @@ func buildPrivateKeyFromHex(privateKeyHex string) *ecdsa.PrivateKey {
 	return privateKey
 }
 
+// wei2Other converts wei to other unit (specified by targetUnit).
 func wei2Other(sourceAmtInWei decimal.Decimal, targetUnit string) decimal.Decimal {
 	if targetUnit == unitWei {
 		return sourceAmtInWei
@@ -103,6 +112,7 @@ func wei2Other(sourceAmtInWei decimal.Decimal, targetUnit string) decimal.Decima
 	}
 }
 
+// unify2Wei converts any unit (specified by sourceUnit) to wei.
 func unify2Wei(sourceAmt decimal.Decimal, sourceUnit string) decimal.Decimal {
 	if sourceUnit == unitWei {
 		return sourceAmt
@@ -115,6 +125,7 @@ func unify2Wei(sourceAmt decimal.Decimal, sourceUnit string) decimal.Decimal {
 	}
 }
 
+// extractAddressFromPrivateKey extracts address from ecdsa.PrivateKey.
 func extractAddressFromPrivateKey(privateKey *ecdsa.PrivateKey) common.Address {
 	publicKey := privateKey.Public()
 	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
@@ -125,6 +136,7 @@ func extractAddressFromPrivateKey(privateKey *ecdsa.PrivateKey) common.Address {
 	return crypto.PubkeyToAddress(*publicKeyECDSA)
 }
 
+// getReceipt gets the receipt of tx, re-check util timeout if tx not found.
 func getReceipt(client *ethclient.Client, txHash common.Hash, timeout time.Duration) (*types.Receipt, error) {
 	var beginTime = time.Now()
 
@@ -165,7 +177,7 @@ type GasStationPrice struct {
 	FastestWait float64
 }
 
-// getGasPrice, get gas price from ethgasstation, built-in method client.SuggestGasPrice is not good enough.
+// getGasPrice, get gas price from EthGasstationUrl, built-in method client.SuggestGasPrice is not good enough.
 func getGasPriceFromEthgasstation() (*big.Int, error) {
 	var gasStationPrice GasStationPrice
 	resp, err := http.Get(EthGasstationUrl)
@@ -267,12 +279,13 @@ func Call(client *ethclient.Client, toAddress common.Address, data []byte) ([]by
 	return client.CallContract(ctx, msg, nil)
 }
 
+// getRecoveryId gets ecdsa recover id (0 or 1) from v.
 func getRecoveryId(v *big.Int) int {
 	var recoveryId int
 	// Note: can be simplified by checking parity (i.e. odd-even)
-	if v.Int64() == 27 || v.Int64() == 28 { // v before bip155
+	if v.Int64() == 27 || v.Int64() == 28 { // v before eip155
 		recoveryId = int(v.Int64()) - 27
-	} else { // v after bip155
+	} else { // v after eip155
 		// derive chainId
 		var chainId = int((v.Int64() - 35) / 2)
 		// derive recoveryId
@@ -281,21 +294,21 @@ func getRecoveryId(v *big.Int) int {
 	return recoveryId
 }
 
-// Build a 65-byte compact ECDSA signature (containing the recovery id as the last element)
+// buildECDSASignature builds a 65-byte compact ECDSA signature (containing the recovery id as the last element)
 func buildECDSASignature(v, r, s *big.Int) []byte {
 	var recoveryId = getRecoveryId(v)
 	// println("recoveryId", recoveryId)
 
-	var r_bytes = make([]byte, 32, 32)
-	var s_bytes = make([]byte, 32, 32)
-	copy(r_bytes[32-len(r.Bytes()):], r.Bytes())
-	copy(s_bytes[32-len(s.Bytes()):], s.Bytes())
+	var rBytes = make([]byte, 32, 32)
+	var sBytes = make([]byte, 32, 32)
+	copy(rBytes[32-len(r.Bytes()):], r.Bytes())
+	copy(sBytes[32-len(s.Bytes()):], s.Bytes())
 
-	var rs_bytes = append(r_bytes, s_bytes...)
-	return append(rs_bytes, byte(recoveryId))
+	var rsBytes = append(rBytes, sBytes...)
+	return append(rsBytes, byte(recoveryId))
 }
 
-// Recover public key, return 65 bytes uncompressed public key
+// RecoverPubkey recover public key, returns 65 bytes uncompressed public key
 func RecoverPubkey(v, r, s *big.Int, msg []byte) ([]byte, error) {
 	signature := buildECDSASignature(v, r, s)
 

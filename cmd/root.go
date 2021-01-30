@@ -27,23 +27,29 @@ const nodeKovan = "kovan"
 const nodeRinkeby = "rinkeby"
 const nodeGoerli = "goerli"
 const nodeSokol = "sokol"
+const nodeHeco = "heco"
+const nodeHecoTest = "hecotest"
 
 var nodeUrlMap = map[string]string{
-	nodeMainnet: "wss://mainnet.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472", // please replace it
-	nodeRopsten: "wss://ropsten.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472", // please replace it
-	nodeKovan:   "wss://kovan.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472",   // please replace it
-	nodeRinkeby: "wss://rinkeby.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472", // please replace it
-	nodeGoerli:  "wss://goerli.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472",  // please replace it
-	nodeSokol:   "https://sokol.poa.network",
+	nodeMainnet:  "wss://mainnet.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472", // please replace it
+	nodeRopsten:  "wss://ropsten.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472", // please replace it
+	nodeKovan:    "wss://kovan.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472",   // please replace it
+	nodeRinkeby:  "wss://rinkeby.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472", // please replace it
+	nodeGoerli:   "wss://goerli.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472",  // please replace it
+	nodeSokol:    "https://sokol.poa.network",
+	nodeHeco:     "wss://ws-mainnet-node.huobichain.com",
+	nodeHecoTest: "wss://ws-testnet.hecochain.com",
 }
 
 var nodeTxLinkMap = map[string]string{
-	nodeMainnet: "https://etherscan.io/tx/",
-	nodeRopsten: "https://ropsten.etherscan.io/tx/",
-	nodeKovan:   "https://kovan.etherscan.io/tx/",
-	nodeRinkeby: "https://rinkeby.etherscan.io/tx/",
-	nodeGoerli:  "https://goerli.etherscan.io/tx/",
-	nodeSokol:   "https://blockscout.com/poa/sokol/tx/",
+	nodeMainnet:  "https://etherscan.io/tx/",
+	nodeRopsten:  "https://ropsten.etherscan.io/tx/",
+	nodeKovan:    "https://kovan.etherscan.io/tx/",
+	nodeRinkeby:  "https://rinkeby.etherscan.io/tx/",
+	nodeGoerli:   "https://goerli.etherscan.io/tx/",
+	nodeSokol:    "https://blockscout.com/poa/sokol/tx/",
+	nodeHeco:     "https://scan.hecochain.com/tx/",
+	nodeHecoTest: "https://scan-testnet.hecochain.com/tx/",
 }
 
 // Execute cobra root command
@@ -85,7 +91,8 @@ func initConfig() {
 	checkErr(err)
 
 	// validation
-	if !contains([]string{nodeMainnet, nodeRopsten, nodeKovan, nodeRinkeby, nodeGoerli, nodeSokol}, nodeOpt) {
+	if !contains([]string{nodeMainnet, nodeRopsten, nodeKovan, nodeRinkeby, nodeGoerli, nodeSokol,
+		nodeHeco, nodeHecoTest}, nodeOpt) {
 		log.Printf("invalid option for --node: %v", nodeOpt)
 		rootCmd.Help()
 		os.Exit(1)

@@ -130,7 +130,7 @@ contract address 0x4D1A2e2bB4F88F0250f26Ffff098B0b30B26BF38
 Decode raw transaction:
 ```shell
 $ ethutil decode-raw-tx --hex-data 0xf86c808504e3b2920082520894428cf082d321d435ff0e1f8a994e01f976f19c118809b5552f5abade008026a00a27decf27241dca4e5d82bd5b7c1fbcc3f09c35a2a05cb967f2983d148ad6aba0596e9baa40ab157f5b1b0d66746472550ba9000d4154e3faa43ccce00b030452
-basic info (see bip155):
+basic info (see eip155):
 nonce = 0
 gas price = 21000000000, i.e. 21 Gwei
 gas limit = 21000

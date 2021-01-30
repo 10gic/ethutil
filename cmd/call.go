@@ -119,6 +119,7 @@ func buildTxData(funcSignature string, inputArgData []string) ([]byte, error) {
 	return append(functionSelector, data...), nil
 }
 
+// extractFuncName extracts function name from input,
 // input example:
 // fun1
 // fun1(uint256)
@@ -138,6 +139,7 @@ func extractFuncName(input string) string {
 	return funcName
 }
 
+// parseFuncSignature parse function signature to `function name` and `function args`.
 // input example: "function add(uint256   xx, address xx, bool xx)"
 // output "add, [uint256 address bool]"
 func parseFuncSignature(input string) (string, []string, error) {

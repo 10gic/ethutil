@@ -43,7 +43,7 @@ var decodeRawTxCmd = &cobra.Command{
 			panic("rlp decode failed, may not a valid eth raw transaction")
 		}
 
-		fmt.Printf("basic info (see bip155):\n")
+		fmt.Printf("basic info (see eip155):\n")
 		fmt.Printf("nonce = %d\n", tx.Nonce())
 		fmt.Printf("gas price = %s, i.e. %s Gwei\n", tx.GasPrice().String(), wei2Other(bigInt2Decimal(tx.GasPrice()), unitGwei).String())
 		fmt.Printf("gas limit = %d\n", tx.Gas())
@@ -51,7 +51,7 @@ var decodeRawTxCmd = &cobra.Command{
 		fmt.Printf("value = %s, i.e. %s Ether\n", tx.Value().String(), wei2Other(bigInt2Decimal(tx.Value()), unitEther).String())
 		fmt.Printf("input data (hex) = %x\n", tx.Data())
 
-		if tx.ChainId().Int64() > 0 { // chain id is not available before bip155
+		if tx.ChainId().Int64() > 0 { // chain id is not available before eip155
 			fmt.Printf("chain id = %s\n", tx.ChainId().String())
 		}
 
