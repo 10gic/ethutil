@@ -16,7 +16,7 @@ var dumpAddrPrivateKeyOrMnemonics []string
 
 func init() {
 	dumpAddrCmd.Flags().StringSliceVarP(&dumpAddrPrivateKeyOrMnemonics, "private-key-or-mnemonic", "", []string{}, "the private key or mnemonic your want to dump address, multiple items can separate by comma, the option can be also specified multiple times")
-	dumpAddrCmd.MarkFlagRequired("private-key-or-mnemonic")
+	_ = dumpAddrCmd.MarkFlagRequired("private-key-or-mnemonic")
 }
 
 var dumpAddrCmd = &cobra.Command{

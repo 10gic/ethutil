@@ -20,7 +20,7 @@ var genkeyCmd = &cobra.Command{
 	Short: "Generate eth private key",
 	Run: func(cmd *cobra.Command, args []string) {
 		if genkeyNumOpt <= 0 {
-			cmd.Help()
+			_ = cmd.Help()
 			os.Exit(1)
 		}
 

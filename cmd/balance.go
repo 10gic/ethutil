@@ -29,7 +29,7 @@ func init() {
 	balanceCmd.Flags().StringSliceVarP(&balanceCheckAddresses, "addr", "a", []string{}, "the eth address your want to check, multiple addresses can separate by comma, the option can be also specified multiple times")
 	balanceCmd.Flags().StringVarP(&balanceUnit, "unit", "u", "ether", "wei | gwei | ether, unit of balance")
 
-	balanceCmd.MarkFlagRequired("addr")
+	_ = balanceCmd.MarkFlagRequired("addr")
 }
 
 func validationBalanceCmdOpts() bool {
@@ -55,11 +55,11 @@ func validationBalanceCmdOpts() bool {
 }
 
 var balanceCmd = &cobra.Command{
-	Use:   "check-balance",
+	Use:   "balance",
 	Short: "Check eth balance for address",
 	Run: func(cmd *cobra.Command, args []string) {
 		if ! validationBalanceCmdOpts() {
-			cmd.Help()
+			_ = cmd.Help()
 			os.Exit(1)
 		}
 

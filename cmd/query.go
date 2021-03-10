@@ -20,12 +20,12 @@ func init() {
 }
 
 var queryCmd = &cobra.Command{
-	Use:   "contract-query contract_address 'function definition' arg1 arg2 ...",
+	Use:   "query contract_address 'function definition' arg1 arg2 ...",
 	Short: "Invokes the (constant) contract method",
 	Args: cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		if !validationQueryCmdOpts(args) {
-			cmd.Help()
+			_ = cmd.Help()
 			os.Exit(1)
 		}
 
@@ -42,7 +42,7 @@ var queryCmd = &cobra.Command{
 		}
 		if !isContract {
 			log.Printf("%v is NOT a contract address", contractAddr)
-			cmd.Help()
+			_ = cmd.Help()
 			os.Exit(1)
 		}
 

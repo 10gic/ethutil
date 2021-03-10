@@ -22,7 +22,7 @@ func init() {
 	computeContractAddrCmd.Flags().StringVarP(&computeContractAddrSalt, "salt", "", "", "salt, for CREATE2")
 	computeContractAddrCmd.Flags().StringVarP(&computeContractAddrInitCode, "init-code", "", "", "init code, for CREATE2")
 
-	computeContractAddrCmd.MarkFlagRequired("deployer-addr")
+	_ = computeContractAddrCmd.MarkFlagRequired("deployer-addr")
 }
 
 func validationComputeContractAddrCmdOpts() bool {
@@ -59,7 +59,7 @@ var computeContractAddrCmd = &cobra.Command{
 	Short: "Compute contract address before deployment",
 	Run: func(cmd *cobra.Command, args []string) {
 		if !validationComputeContractAddrCmdOpts() {
-			cmd.Help()
+			_ = cmd.Help()
 			os.Exit(1)
 		}
 

@@ -33,12 +33,12 @@ func init() {
 }
 
 var callCmd = &cobra.Command{
-	Use:   "contract-call contract_address 'function signature' arg1 arg2 ...",
+	Use:   "call contract_address 'function signature' arg1 arg2 ...",
 	Short: "Invokes the (paid) contract method",
 	Args:  cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		if !validationCallCmdOpts(args) {
-			cmd.Help()
+			_ = cmd.Help()
 			os.Exit(1)
 		}
 
@@ -55,7 +55,7 @@ var callCmd = &cobra.Command{
 		}
 		if !isContract {
 			log.Printf("%v is NOT a contract address", contractAddr)
-			cmd.Help()
+			_ = cmd.Help()
 			os.Exit(1)
 		}
 

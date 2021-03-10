@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/rlp"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -246,6 +248,16 @@ func Transact(client *ethclient.Client, privateKey *ecdsa.PrivateKey, toAddress 
 		return "", fmt.Errorf("SignTx fail: %w", err)
 	}
 
+	if showRawTxOpt {
+		txData, err := rlp.EncodeToBytes(signedTx)
+		checkErr(err)
+		log.Printf("raw tx = %v", hexutil.Encode(txData))
+	}
+
+	if dryRunOpt {
+		return signedTx.Hash().String(), nil
+	}
+
 	err = client.SendTransaction(context.Background(), signedTx)
 	if err != nil {
 		return "", fmt.Errorf("SendTransaction fail: %w", err)
@@ -262,7 +274,7 @@ func Transact(client *ethclient.Client, privateKey *ecdsa.PrivateKey, toAddress 
 	}
 
 	if !terseOutputOpt {
-		log.Printf(nodeTxLinkMap[nodeOpt] + signedTx.Hash().String())
+		log.Printf(nodeTxExplorerUrlMap[nodeOpt] + signedTx.Hash().String())
 	}
 	if rp.Status != types.ReceiptStatusSuccessful {
 		return "", fmt.Errorf("tx (%v) fail", signedTx.Hash().String())

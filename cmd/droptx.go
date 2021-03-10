@@ -7,12 +7,12 @@ import (
 	"math/big"
 )
 
-var dropPendingTxCmd = &cobra.Command{
-	Use:   "drop-pending-tx",
+var dropTxCmd = &cobra.Command{
+	Use:   "drop-tx",
 	Short: "Drop pending tx for address",
 	Run: func(cmd *cobra.Command, args []string) {
 		if privateKeyOpt == "" {
-			log.Fatalf("--private-key is required for drop-pending-tx command")
+			log.Fatalf("--private-key is required for drop-tx command")
 		}
 
 		// send 0 eth to itself

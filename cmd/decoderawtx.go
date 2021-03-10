@@ -17,7 +17,7 @@ var rawTxHexData string
 
 func init() {
 	decodeRawTxCmd.Flags().StringVarP(&rawTxHexData, "hex-data", "", "", "the hex data (leading 0x is optional) of raw tx")
-	decodeRawTxCmd.MarkFlagRequired("hex-data")
+	_ = decodeRawTxCmd.MarkFlagRequired("hex-data")
 }
 
 var decodeRawTxCmd = &cobra.Command{
@@ -25,7 +25,7 @@ var decodeRawTxCmd = &cobra.Command{
 	Short: "Decode raw transaction",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(rawTxHexData) == 0 {
-			cmd.Help()
+			_ = cmd.Help()
 			os.Exit(1)
 		}
 		if !isValidHexString(rawTxHexData) {

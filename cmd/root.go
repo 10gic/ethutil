@@ -15,6 +15,8 @@ var (
 	gasLimitOpt    uint64
 	privateKeyOpt  string
 	terseOutputOpt bool
+	dryRunOpt      bool
+	showRawTxOpt   bool
 	rootCmd        = &cobra.Command{
 		Use:   "ethutil",
 		Short: "An Ethereum util, can transfer eth, check balance, drop pending tx, etc",
@@ -41,7 +43,7 @@ var nodeUrlMap = map[string]string{
 	nodeHecoTest: "wss://ws-testnet.hecochain.com",
 }
 
-var nodeTxLinkMap = map[string]string{
+var nodeTxExplorerUrlMap = map[string]string{
 	nodeMainnet:  "https://etherscan.io/tx/",
 	nodeRopsten:  "https://ropsten.etherscan.io/tx/",
 	nodeKovan:    "https://kovan.etherscan.io/tx/",
@@ -66,11 +68,13 @@ func init() {
 	rootCmd.PersistentFlags().Uint64VarP(&gasLimitOpt, "gas-limit", "", 0, "the gas limit")
 	rootCmd.PersistentFlags().StringVarP(&privateKeyOpt, "private-key", "k", "", "the private key, eth would be send from this account")
 	rootCmd.PersistentFlags().BoolVarP(&terseOutputOpt, "terse", "", false, "produce terse output")
+	rootCmd.PersistentFlags().BoolVarP(&dryRunOpt, "dry-run", "", false, "do not broadcast tx")
+	rootCmd.PersistentFlags().BoolVarP(&showRawTxOpt, "show-raw-tx", "", false, "print raw signed tx")
 
 	rootCmd.AddCommand(balanceCmd)
 	rootCmd.AddCommand(transferCmd)
 	rootCmd.AddCommand(decodeRawTxCmd)
-	rootCmd.AddCommand(dropPendingTxCmd)
+	rootCmd.AddCommand(dropTxCmd)
 	rootCmd.AddCommand(genkeyCmd)
 	rootCmd.AddCommand(dumpAddrCmd)
 	rootCmd.AddCommand(callCmd)
@@ -94,7 +98,7 @@ func initConfig() {
 	if !contains([]string{nodeMainnet, nodeRopsten, nodeKovan, nodeRinkeby, nodeGoerli, nodeSokol,
 		nodeHeco, nodeHecoTest}, nodeOpt) {
 		log.Printf("invalid option for --node: %v", nodeOpt)
-		rootCmd.Help()
+		_ = rootCmd.Help()
 		os.Exit(1)
 	}
 
@@ -105,7 +109,7 @@ func initConfig() {
 	if gasPriceOpt != "" {
 		if _, err = decimal.NewFromString(gasPriceOpt); err != nil {
 			log.Printf("invalid option for --gas-price: %v", gasPriceOpt)
-			rootCmd.Help()
+			_ = rootCmd.Help()
 			os.Exit(1)
 		}
 	}

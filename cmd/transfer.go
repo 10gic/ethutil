@@ -24,8 +24,8 @@ func init() {
 	transferCmd.Flags().BoolVarP(&transferNotCheck, "not-check", "", false, "don't check result, return immediately after send transaction")
 	transferCmd.Flags().StringVarP(&transferHexData, "hex-data", "", "", "the payload hex data when transfer")
 
-	transferCmd.MarkFlagRequired("to-addr")
-	transferCmd.MarkFlagRequired("amount")
+	_ = transferCmd.MarkFlagRequired("to-addr")
+	_ = transferCmd.MarkFlagRequired("amount")
 }
 
 func validationTransferCmdOpts() bool {
@@ -85,7 +85,7 @@ var transferCmd = &cobra.Command{
 	Short: "Transfer eth to another address",
 	Run: func(cmd *cobra.Command, args []string) {
 		if ! validationTransferCmdOpts() {
-			cmd.Help()
+			_ = cmd.Help()
 			os.Exit(1)
 		}
 

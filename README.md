@@ -8,32 +8,33 @@ GO111MODULE=on go install github.com/10gic/ethutil
 
 # Usage
 ```txt
-$ ethutil --help
-An Ethereum util, can transfer eth, check balance, drop pending tx, call any contract function etc
+An Ethereum util, can transfer eth, check balance, drop pending tx, etc
 
 Usage:
   ethutil [command]
 
 Available Commands:
-  check-balance         Check eth balance for address
+  balance               Check eth balance for address
+  call                  Invokes the (paid) contract method
   compute-contract-addr Compute contract address before deployment
-  contract-call         Invokes the (paid) contract method
-  contract-deploy       Deploy contract
-  contract-query        Invokes the (constant) contract method
   decode-raw-tx         Decode raw transaction
-  drop-pending-tx       Drop pending tx for address
+  deploy                Deploy contract
+  drop-tx               Drop pending tx for address
   dump-address          Dump address from private key
   gen-private-key       Generate eth private key
   help                  Help about any command
+  query                 Invokes the (constant) contract method
   transfer              Transfer eth to another address
 
 Flags:
+      --dry-run              do not broadcast tx
       --gas-limit uint       the gas limit
       --gas-price string     the gas price, unit is gwei.
   -h, --help                 help for ethutil
       --node string          mainnet | ropsten | kovan | rinkeby | sokol, the node type (default "kovan")
       --node-url string      the target connection node url, if this option specified, the --node option is ignored
   -k, --private-key string   the private key, eth would be send from this account
+      --show-raw-tx          print raw signed tx
       --terse                produce terse output
 
 Use "ethutil [command] --help" for more information about a command.
@@ -42,13 +43,13 @@ Use "ethutil [command] --help" for more information about a command.
 # Example
 Check balance:
 ```shell
-$ ethutil check-balance --addr 0x756F45E3FA69347A9A973A725E3C98bC4db0b5a0
+$ ethutil balance --addr 0x756F45E3FA69347A9A973A725E3C98bC4db0b5a0
 addr 0x756F45E3FA69347A9A973A725E3C98bC4db0b5a0, balance 0.026990556 ether
 ```
 
 Check balance (terse output, multiple addresses):
 ```shell
-$ ethutil --terse check-balance --addr 0x756F45E3FA69347A9A973A725E3C98bC4db0b5a0 --addr 0xf42f905231c770f0a406f2b768877fb49eee0f21
+$ ethutil --terse balance --addr 0x756F45E3FA69347A9A973A725E3C98bC4db0b5a0 --addr 0xf42f905231c770f0a406f2b768877fb49eee0f21
 0x756F45E3FA69347A9A973A725E3C98bC4db0b5a0 0.026990556
 0xf42f905231c770f0a406f2b768877fb49eee0f21 408.33061699
 ```
@@ -60,7 +61,7 @@ $ ethutil transfer --private-key 0xXXX --to-addr 0xYYY --amount 1 --unit ether
 
 Drop pending tx:
 ```shell
-$ ethutil drop-pending-tx --private-key 0xXXX
+$ ethutil drop-tx --private-key 0xXXX
 ```
 
 Dump address from private key:
@@ -86,28 +87,28 @@ $ ethutil --terse gen-private-key -n 10
 
 Deploy a contract:
 ```shell
-$ ethutil --private-key 0xXXX contract-deploy --bin-file contract-bytecode.bin
+$ ethutil --private-key 0xXXX deploy --bin-file contract-bytecode.bin
 ```
 
 Invokes the (paid) contract method:
 ```shell
-$ ethutil --node mainnet --private-key 0xXXX contract-call 0xdac17f958d2ee523a2206206994597c13d831ec7 'transfer(address, uint256)' 0x8F36975cdeA2e6E64f85719788C8EFBBe89DFBbb 1000000
+$ ethutil --node mainnet --private-key 0xXXX call 0xdac17f958d2ee523a2206206994597c13d831ec7 'transfer(address, uint256)' 0x8F36975cdeA2e6E64f85719788C8EFBBe89DFBbb 1000000
 ```
 
 Invokes the (paid) contract method with abi file:
 ```shell
-$ ethutil --node mainnet --private-key 0xXXX contract-call 0xdac17f958d2ee523a2206206994597c13d831ec7 --abi-file path/to/abi transfer 0x8F36975cdeA2e6E64f85719788C8EFBBe89DFBbb 1000000
+$ ethutil --node mainnet --private-key 0xXXX call 0xdac17f958d2ee523a2206206994597c13d831ec7 --abi-file path/to/abi transfer 0x8F36975cdeA2e6E64f85719788C8EFBBe89DFBbb 1000000
 ```
 
 Invokes the (constant) contract method:
 ```shell
-$ ethutil --node mainnet contract-query 0xdac17f958d2ee523a2206206994597c13d831ec7 'balanceOf(address) returns (uint256)' 0x703662e526d2b71944fbfb9d87f61de3e0f0f290
+$ ethutil --node mainnet query 0xdac17f958d2ee523a2206206994597c13d831ec7 'balanceOf(address) returns (uint256)' 0x703662e526d2b71944fbfb9d87f61de3e0f0f290
 ret0 = 1100000000000
 ```
 
 Invokes the (constant) contract method with abi file:
 ```shell
-$ ethutil --node mainnet contract-query 0xdac17f958d2ee523a2206206994597c13d831ec7 --abi-file path/to/abi balanceOf 0x703662e526d2b71944fbfb9d87f61de3e0f0f290
+$ ethutil --node mainnet query 0xdac17f958d2ee523a2206206994597c13d831ec7 --abi-file path/to/abi balanceOf 0x703662e526d2b71944fbfb9d87f61de3e0f0f290
 ```
 
 Compute contract address before deployment:

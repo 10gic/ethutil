@@ -19,11 +19,11 @@ func init() {
 	deployCmd.Flags().StringVarP(&deployABIFile, "abi-file", "", "", "the path of abi file, if this option specified, 'constructor signature' must not specified")
 	deployCmd.Flags().StringVarP(&deployBinFile, "bin-file", "", "", "the path of byte code file of contract")
 
-	deployCmd.MarkFlagRequired("bin-file")
+	_ = deployCmd.MarkFlagRequired("bin-file")
 }
 
 var deployCmd = &cobra.Command{
-	Use:   "contract-deploy [constructor signature] arg1 arg2 ...",
+	Use:   "deploy [constructor signature] arg1 arg2 ...",
 	Short: "Deploy contract",
 	Run: func(cmd *cobra.Command, args []string) {
 		client, err := ethclient.Dial(nodeUrlOpt)
