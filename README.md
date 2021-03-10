@@ -3,7 +3,7 @@ An Ethereum util, can transfer eth, check balance, drop pending tx, dump address
 
 # Install
 ```shell
-GO111MODULE=on go install github.com/10gic/ethutil
+GO111MODULE=on go install github.com/10gic/ethutil@latest
 ```
 
 # Usage
