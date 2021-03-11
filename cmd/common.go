@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/rpc"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -138,8 +138,8 @@ func extractAddressFromPrivateKey(privateKey *ecdsa.PrivateKey) common.Address {
 	return crypto.PubkeyToAddress(*publicKeyECDSA)
 }
 
-// getReceipt gets the receipt of tx, re-check util timeout if tx not found.
-func getReceipt(client *ethclient.Client, txHash common.Hash, timeout time.Duration) (*types.Receipt, error) {
+// getTxReceipt gets the receipt of tx, re-check util timeout if tx not found.
+func getTxReceipt(client *ethclient.Client, txHash common.Hash, timeout time.Duration) (*types.Receipt, error) {
 	var beginTime = time.Now()
 
 recheck:
@@ -160,7 +160,7 @@ recheck:
 	}
 
 	// not timeout
-	log.Printf("re-check after 10 seconds")
+	log.Printf("re-check tx %v after 10 seconds", txHash.String())
 	time.Sleep(time.Second * 10)
 	goto recheck
 }
@@ -201,8 +201,29 @@ func getGasPriceFromEthgasstation() (*big.Int, error) {
 	return gasPrice, nil
 }
 
+// SendRawTransaction broadcast signed tx and return tx returned by rpc node
+func SendRawTransaction(rpcClient *rpc.Client, signedTx *types.Transaction) (*common.Hash, error){
+	data, err := signedTx.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+
+	if globalOptShowRawTx {
+		log.Printf("raw tx = %v", hexutil.Encode(data))
+	}
+
+	var result hexutil.Bytes
+	err = rpcClient.CallContext(context.Background(), &result, "eth_sendRawTransaction", hexutil.Encode(data))
+	if err != nil {
+		return nil, err
+	}
+
+	var hash = common.HexToHash(hexutil.Encode(result))
+	return &hash, nil
+}
+
 // Transact invokes the (paid) contract method.
-func Transact(client *ethclient.Client, privateKey *ecdsa.PrivateKey, toAddress *common.Address, amount *big.Int, gasPrice *big.Int, data []byte) (string, error) {
+func Transact(rpcClient *rpc.Client, client *ethclient.Client, privateKey *ecdsa.PrivateKey, toAddress *common.Address, amount *big.Int, gasPrice *big.Int, data []byte) (string, error) {
 	fromAddress := extractAddressFromPrivateKey(privateKey)
 
 	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
@@ -210,7 +231,7 @@ func Transact(client *ethclient.Client, privateKey *ecdsa.PrivateKey, toAddress 
 		return "", fmt.Errorf("PendingNonceAt fail: %w", err)
 	}
 
-	gasLimit := gasLimitOpt
+	gasLimit := globalOptGasLimit
 	if gasLimit == 0 { // if user not specified
 		gasLimit = uint64(gasUsedByTransferEth)
 
@@ -248,39 +269,40 @@ func Transact(client *ethclient.Client, privateKey *ecdsa.PrivateKey, toAddress 
 		return "", fmt.Errorf("SignTx fail: %w", err)
 	}
 
-	if showRawTxOpt {
-		txData, err := rlp.EncodeToBytes(signedTx)
-		checkErr(err)
-		log.Printf("raw tx = %v", hexutil.Encode(txData))
-	}
-
-	if dryRunOpt {
+	if globalOptDryRun {
 		return signedTx.Hash().String(), nil
 	}
 
-	err = client.SendTransaction(context.Background(), signedTx)
+	rpcReturnTx, err := SendRawTransaction(rpcClient, signedTx)
 	if err != nil {
-		return "", fmt.Errorf("SendTransaction fail: %w", err)
+		return "", fmt.Errorf("SendRawTransaction fail: %w", err)
+	}
+
+	if signedTx.Hash() != *rpcReturnTx {
+		log.Printf("warning: tx not same. the computed tx is %v, but rpc eth_sendRawTransaction return tx %v, use the later", signedTx.Hash(), rpcReturnTx)
 	}
 
 	if transferNotCheck {
-		return signedTx.Hash().String(), nil
+		return rpcReturnTx.String(), nil
 	}
-	//log.Printf("tx sent: %s", signedTx.Hash().Hex())
 
-	rp, err := getReceipt(client, signedTx.Hash(), 0)
+	rp, err := getTxReceipt(client, *rpcReturnTx, 0)
 	if err != nil {
-		return "", fmt.Errorf("getReceipt fail: %w", err)
+		return "", fmt.Errorf("getTxReceipt fail: %w", err)
 	}
 
-	if !terseOutputOpt {
-		log.Printf(nodeTxExplorerUrlMap[nodeOpt] + signedTx.Hash().String())
+	if !globalOptTerseOutput {
+		if globalOptNodeUrl == "" {
+			// only show tx link when use not customize nodeUrl
+			log.Printf(nodeTxExplorerUrlMap[globalOptNode] + rpcReturnTx.String())
+		}
 	}
+
 	if rp.Status != types.ReceiptStatusSuccessful {
-		return "", fmt.Errorf("tx (%v) fail", signedTx.Hash().String())
+		return "", fmt.Errorf("tx %v minted, but status is failed, please check it in block explorer", rpcReturnTx.String())
 	}
 
-	return signedTx.Hash().String(), nil
+	return rpcReturnTx.String(), nil
 }
 
 // Call invokes the (constant) contract method.

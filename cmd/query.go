@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/spf13/cobra"
 	"io/ioutil"
 	"log"
@@ -29,14 +28,13 @@ var queryCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		client, err := ethclient.Dial(nodeUrlOpt)
-		checkErr(err)
+		InitGlobalClient(globalOptNodeUrl)
 
 		contractAddr := args[0]
 		funcDefinition := args[1]
 		inputArgData := args[2:]
 
-		isContract, err := isContractAddress(client, common.HexToAddress(contractAddr))
+		isContract, err := isContractAddress(globalClient.EthClient, common.HexToAddress(contractAddr))
 		if err != nil {
 			panic(err)
 		}
@@ -60,7 +58,7 @@ var queryCmd = &cobra.Command{
 		txData, err := buildTxData(funcDefinition, inputArgData)
 		checkErr(err)
 
-		output, err := Call(client, common.HexToAddress(contractAddr), txData)
+		output, err := Call(globalClient.EthClient, common.HexToAddress(contractAddr), txData)
 		checkErr(err)
 
 		var v = make(map[string]interface{})

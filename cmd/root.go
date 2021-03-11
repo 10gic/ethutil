@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
 	"log"
 	"os"
 
@@ -9,19 +11,37 @@ import (
 )
 
 var (
-	nodeUrlOpt     string
-	nodeOpt        string
-	gasPriceOpt    string
-	gasLimitOpt    uint64
-	privateKeyOpt  string
-	terseOutputOpt bool
-	dryRunOpt      bool
-	showRawTxOpt   bool
-	rootCmd        = &cobra.Command{
+	globalOptNodeUrl     string
+	globalOptNode        string
+	globalOptGasPrice    string
+	globalOptGasLimit    uint64
+	globalOptPrivateKey  string
+	globalOptTerseOutput bool
+	globalOptDryRun      bool
+	globalOptShowRawTx   bool
+	rootCmd              = &cobra.Command{
 		Use:   "ethutil",
 		Short: "An Ethereum util, can transfer eth, check balance, drop pending tx, etc",
 	}
+
+	globalClient *Client
 )
+
+type Client struct {
+	EthClient *ethclient.Client
+	RpcClient *rpc.Client
+}
+
+// InitGlobalClient initializes a client that uses the given RPC client.
+func InitGlobalClient(nodeUrl string) {
+	rpcClient, err := rpc.Dial(nodeUrl)
+	checkErr(err)
+
+	globalClient = &Client{
+		EthClient: ethclient.NewClient(rpcClient),
+		RpcClient: rpcClient,
+	}
+}
 
 const nodeMainnet = "mainnet"
 const nodeRopsten = "ropsten"
@@ -62,14 +82,14 @@ func Execute() error {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVarP(&nodeUrlOpt, "node-url", "", "", "the target connection node url, if this option specified, the --node option is ignored")
-	rootCmd.PersistentFlags().StringVarP(&nodeOpt, "node", "", "kovan", "mainnet | ropsten | kovan | rinkeby | sokol, the node type")
-	rootCmd.PersistentFlags().StringVarP(&gasPriceOpt, "gas-price", "", "", "the gas price, unit is gwei.")
-	rootCmd.PersistentFlags().Uint64VarP(&gasLimitOpt, "gas-limit", "", 0, "the gas limit")
-	rootCmd.PersistentFlags().StringVarP(&privateKeyOpt, "private-key", "k", "", "the private key, eth would be send from this account")
-	rootCmd.PersistentFlags().BoolVarP(&terseOutputOpt, "terse", "", false, "produce terse output")
-	rootCmd.PersistentFlags().BoolVarP(&dryRunOpt, "dry-run", "", false, "do not broadcast tx")
-	rootCmd.PersistentFlags().BoolVarP(&showRawTxOpt, "show-raw-tx", "", false, "print raw signed tx")
+	rootCmd.PersistentFlags().StringVarP(&globalOptNodeUrl, "node-url", "", "", "the target connection node url, if this option specified, the --node option is ignored")
+	rootCmd.PersistentFlags().StringVarP(&globalOptNode, "node", "", "kovan", "mainnet | ropsten | kovan | rinkeby | sokol, the node type")
+	rootCmd.PersistentFlags().StringVarP(&globalOptGasPrice, "gas-price", "", "", "the gas price, unit is gwei.")
+	rootCmd.PersistentFlags().Uint64VarP(&globalOptGasLimit, "gas-limit", "", 0, "the gas limit")
+	rootCmd.PersistentFlags().StringVarP(&globalOptPrivateKey, "private-key", "k", "", "the private key, eth would be send from this account")
+	rootCmd.PersistentFlags().BoolVarP(&globalOptTerseOutput, "terse", "", false, "produce terse output")
+	rootCmd.PersistentFlags().BoolVarP(&globalOptDryRun, "dry-run", "", false, "do not broadcast tx")
+	rootCmd.PersistentFlags().BoolVarP(&globalOptShowRawTx, "show-raw-tx", "", false, "print raw signed tx")
 
 	rootCmd.AddCommand(balanceCmd)
 	rootCmd.AddCommand(transferCmd)
@@ -85,30 +105,30 @@ func init() {
 
 func initConfig() {
 	var err error
-	nodeUrlOpt, err = rootCmd.Flags().GetString("node-url")
+	globalOptNodeUrl, err = rootCmd.Flags().GetString("node-url")
 	checkErr(err)
-	nodeOpt, err = rootCmd.Flags().GetString("node")
+	globalOptNode, err = rootCmd.Flags().GetString("node")
 	checkErr(err)
-	gasPriceOpt, err = rootCmd.Flags().GetString("gas-price")
+	globalOptGasPrice, err = rootCmd.Flags().GetString("gas-price")
 	checkErr(err)
-	terseOutputOpt, err = rootCmd.Flags().GetBool("terse")
+	globalOptTerseOutput, err = rootCmd.Flags().GetBool("terse")
 	checkErr(err)
 
 	// validation
 	if !contains([]string{nodeMainnet, nodeRopsten, nodeKovan, nodeRinkeby, nodeGoerli, nodeSokol,
-		nodeHeco, nodeHecoTest}, nodeOpt) {
-		log.Printf("invalid option for --node: %v", nodeOpt)
+		nodeHeco, nodeHecoTest}, globalOptNode) {
+		log.Printf("invalid option for --node: %v", globalOptNode)
 		_ = rootCmd.Help()
 		os.Exit(1)
 	}
 
-	if nodeUrlOpt == "" {
-		nodeUrlOpt = nodeUrlMap[nodeOpt]
+	if globalOptNodeUrl == "" {
+		globalOptNodeUrl = nodeUrlMap[globalOptNode]
 	}
 
-	if gasPriceOpt != "" {
-		if _, err = decimal.NewFromString(gasPriceOpt); err != nil {
-			log.Printf("invalid option for --gas-price: %v", gasPriceOpt)
+	if globalOptGasPrice != "" {
+		if _, err = decimal.NewFromString(globalOptGasPrice); err != nil {
+			log.Printf("invalid option for --gas-price: %v", globalOptGasPrice)
 			_ = rootCmd.Help()
 			os.Exit(1)
 		}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
 	"log"
@@ -40,7 +41,7 @@ func validationTransferCmdOpts() bool {
 		return false
 	}
 
-	if privateKeyOpt == "" {
+	if globalOptPrivateKey == "" {
 		log.Fatalf("--private-key is required for transfer command")
 		return false
 	}
@@ -57,8 +58,8 @@ const gasUsedByTransferEth = 21000 // The gas used by any transfer is always 210
 
 func getGasPrice(client *ethclient.Client) (*big.Int, error) {
 	var gasPrice *big.Int
-	if gasPriceOpt != "" {
-		gasPriceDecimal, err := decimal.NewFromString(gasPriceOpt)
+	if globalOptGasPrice != "" {
+		gasPriceDecimal, err := decimal.NewFromString(globalOptGasPrice)
 		if err != nil {
 			return nil, err
 		}
@@ -68,7 +69,7 @@ func getGasPrice(client *ethclient.Client) (*big.Int, error) {
 
 	gasPrice, err := client.SuggestGasPrice(context.Background())
 
-	if nodeOpt == nodeMainnet {
+	if globalOptNode == nodeMainnet {
 		// in case of mainnet, get gap price from ethgasstation
 		gasPrice, err = getGasPriceFromEthgasstation()
 		if err != nil {
@@ -89,20 +90,19 @@ var transferCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		InitGlobalClient(globalOptNodeUrl)
+
 		ctx := context.Background()
 
-		client, err := ethclient.Dial(nodeUrlOpt)
-		checkErr(err)
-
-		gasPrice, err := getGasPrice(client)
+		gasPrice, err := getGasPrice(globalClient.EthClient)
 		checkErr(err)
 
 		var amount decimal.Decimal
 		var amountInWei decimal.Decimal
 		if transferAmt == "all" {
 			// transfer all balance (only reserve some gas just pay for this tx) to target address
-			fromAddr := extractAddressFromPrivateKey(buildPrivateKeyFromHex(privateKeyOpt))
-			balance, err := client.BalanceAt(ctx, fromAddr, nil)
+			fromAddr := extractAddressFromPrivateKey(buildPrivateKeyFromHex(globalOptPrivateKey))
+			balance, err := globalClient.EthClient.BalanceAt(ctx, fromAddr, nil)
 			checkErr(err)
 
 			log.Printf("balance of %v is %v wei", fromAddr.String(), balance.String())
@@ -122,7 +122,7 @@ var transferCmd = &cobra.Command{
 			amountInWei = unify2Wei(amount, transferUnit)
 		}
 
-		if tx, err := TransferHelper(client, privateKeyOpt, transferTargetAddr, amountInWei.BigInt(), gasPrice, common.FromHex(transferHexData)); err != nil {
+		if tx, err := TransferHelper(globalClient.RpcClient, globalClient.EthClient, globalOptPrivateKey, transferTargetAddr, amountInWei.BigInt(), gasPrice, common.FromHex(transferHexData)); err != nil {
 			log.Fatalf("transfer fail: %v", err)
 		} else {
 			log.Printf("transfer finished, tx = %v", tx)
@@ -130,12 +130,12 @@ var transferCmd = &cobra.Command{
 	},
 }
 
-func TransferHelper(client *ethclient.Client, privateKeyHex string, toAddress string, amountInWei *big.Int, gasPrice *big.Int, data []byte) (string, error) {
+func TransferHelper(rcpClient *rpc.Client, client *ethclient.Client, privateKeyHex string, toAddress string, amountInWei *big.Int, gasPrice *big.Int, data []byte) (string, error) {
 	log.Printf("transfer %v ether (%v wei) from %v to %v",
 		wei2Other(bigInt2Decimal(amountInWei), unitEther).String(),
 		amountInWei.String(),
 		extractAddressFromPrivateKey(buildPrivateKeyFromHex(privateKeyHex)).String(),
 		toAddress)
 	var toAddr = common.HexToAddress(toAddress)
-	return Transact(client, buildPrivateKeyFromHex(privateKeyHex), &toAddr, amountInWei, gasPrice, data)
+	return Transact(rcpClient, client, buildPrivateKeyFromHex(privateKeyHex), &toAddr, amountInWei, gasPrice, data)
 }

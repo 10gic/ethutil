@@ -41,7 +41,7 @@ var dumpAddrCmd = &cobra.Command{
 
 			privateHexStr := hexutil.Encode(crypto.FromECDSA(privateKey))
 			addr := extractAddressFromPrivateKey(privateKey).String()
-			if terseOutputOpt {
+			if globalOptTerseOutput {
 				fmt.Printf("%v %v\n", privateHexStr, addr)
 			} else {
 				fmt.Printf("private key %v, addr %v\n", privateHexStr, addr)

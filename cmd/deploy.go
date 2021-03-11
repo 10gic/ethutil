@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/spf13/cobra"
 	"io/ioutil"
 	"log"
@@ -26,8 +25,7 @@ var deployCmd = &cobra.Command{
 	Use:   "deploy [constructor signature] arg1 arg2 ...",
 	Short: "Deploy contract",
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := ethclient.Dial(nodeUrlOpt)
-		checkErr(err)
+		InitGlobalClient(globalOptNodeUrl)
 
 		var funcSignature string
 		var inputArgData []string
@@ -39,9 +37,8 @@ var deployCmd = &cobra.Command{
 			}
 		} else { // abi file provided
 			abiContent, err := ioutil.ReadFile(callCmdABIFile)
-			if err != nil {
-				log.Fatal(err)
-			}
+			checkErr(err)
+
 			funcSignature, err = extractFuncDefinition(string(abiContent), "constructor")
 			checkErr(err)
 			// log.Printf("extract func definition from abi: %v", funcSignature)
@@ -66,17 +63,17 @@ var deployCmd = &cobra.Command{
 		checkErr(err)
 		// log.Printf("txData=%s", hex.Dump(txData))
 
-		gasPrice, err := client.SuggestGasPrice(context.Background())
+		gasPrice, err := globalClient.EthClient.SuggestGasPrice(context.Background())
 		checkErr(err)
 
-		if privateKeyOpt == "" {
-			log.Fatalf("--private-key is required for contract-deploy command")
-		} else {
-			tx, err := Transact(client, buildPrivateKeyFromHex(privateKeyOpt), nil, big.NewInt(0), gasPrice, txData)
-			checkErr(err)
-
-			log.Printf("transaction %s finished", tx)
+		if globalOptPrivateKey == "" {
+			log.Fatalf("--private-key is required for deploy command")
 		}
+
+		tx, err := Transact(globalClient.RpcClient, globalClient.EthClient, buildPrivateKeyFromHex(globalOptPrivateKey), nil, big.NewInt(0), gasPrice, txData)
+		checkErr(err)
+
+		log.Printf("transaction %s finished", tx)
 
 	},
 }

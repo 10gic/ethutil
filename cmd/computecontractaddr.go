@@ -67,7 +67,7 @@ var computeContractAddrCmd = &cobra.Command{
 			var nonce uint64
 			if computeContractAddrNonce < 0 {
 				// get nonce online
-				client, err := ethclient.Dial(nodeUrlOpt)
+				client, err := ethclient.Dial(globalOptNodeUrl)
 				checkErr(err)
 
 				nonce , err = client.PendingNonceAt(context.TODO(), common.HexToAddress(computeContractAddrDeployerAddr))

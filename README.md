@@ -41,6 +41,7 @@ Use "ethutil [command] --help" for more information about a command.
 ```
 
 # Example
+## Check Balance
 Check balance:
 ```shell
 $ ethutil balance --addr 0x756F45E3FA69347A9A973A725E3C98bC4db0b5a0
@@ -54,23 +55,24 @@ $ ethutil --terse balance --addr 0x756F45E3FA69347A9A973A725E3C98bC4db0b5a0 --ad
 0xf42f905231c770f0a406f2b768877fb49eee0f21 408.33061699
 ```
 
-Transfer eth:
+## Transfer ETH
+
 ```shell
 $ ethutil transfer --private-key 0xXXX --to-addr 0xYYY --amount 1 --unit ether
 ```
 
-Drop pending tx:
+## Drop Pending Tx
 ```shell
 $ ethutil drop-tx --private-key 0xXXX
 ```
 
-Dump address from private key:
+## Dump Address From Private Key
 ```shell
 $ ethutil dump-address --private-key-or-mnemonic 0xef065dcbc43081c63c0fbf389ec8df3872d9d61b1bc2e98d7a0a4395d11314d2
 private key 0xef065dcbc43081c63c0fbf389ec8df3872d9d61b1bc2e98d7a0a4395d11314d2, addr 0xB2aC853cF815B47903bc19BF4860540306F4f944
 ```
 
-Generate new private key:
+## Generate New Private Key
 ```shell
 $ ethutil --terse gen-private-key -n 10
 0x4a7a7070d616c70ca7caa5e34dfa944f983d530be4831e6e0086a781a679c601 0x356EC6F0b43bdEB18C291D5e629c1585c3c0BA73
@@ -85,11 +87,13 @@ $ ethutil --terse gen-private-key -n 10
 0x69d5b18f0f6a17b5b0d8b9d5ddc4531d6a14d023b789c4b3d753e40562254a1b 0x8F36975cdeA2e6E64f85719788C8EFBBe89DFBbb
 ```
 
+## Deploy Contract
 Deploy a contract:
 ```shell
 $ ethutil --private-key 0xXXX deploy --bin-file contract-bytecode.bin
 ```
 
+## Contract Interaction
 Invokes the (paid) contract method:
 ```shell
 $ ethutil --node mainnet --private-key 0xXXX call 0xdac17f958d2ee523a2206206994597c13d831ec7 'transfer(address, uint256)' 0x8F36975cdeA2e6E64f85719788C8EFBBe89DFBbb 1000000
@@ -111,6 +115,7 @@ Invokes the (constant) contract method with abi file:
 $ ethutil --node mainnet query 0xdac17f958d2ee523a2206206994597c13d831ec7 --abi-file path/to/abi balanceOf 0x703662e526d2b71944fbfb9d87f61de3e0f0f290
 ```
 
+## Compute Contract Address
 Compute contract address before deployment:
 ```shell
 $ ethutil compute-contract-addr --deployer-addr 0x8F36975cdeA2e6E64f85719788C8EFBBe89DFBbb --nonce 0
@@ -128,7 +133,7 @@ init code 0x00
 contract address 0x4D1A2e2bB4F88F0250f26Ffff098B0b30B26BF38
 ```
 
-Decode raw transaction:
+## Decode Raw Transaction
 ```shell
 $ ethutil decode-raw-tx --hex-data 0xf86c808504e3b2920082520894428cf082d321d435ff0e1f8a994e01f976f19c118809b5552f5abade008026a00a27decf27241dca4e5d82bd5b7c1fbcc3f09c35a2a05cb967f2983d148ad6aba0596e9baa40ab157f5b1b0d66746472550ba9000d4154e3faa43ccce00b030452
 basic info (see eip155):

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/spf13/cobra"
 	"log"
 	"math/big"
@@ -63,10 +62,9 @@ var balanceCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		ctx := context.Background()
+		InitGlobalClient(globalOptNodeUrl)
 
-		client, err := ethclient.Dial(nodeUrlOpt)
-		checkErr(err)
+		ctx := context.Background()
 
 		type kv struct {
 			addr   string
@@ -77,14 +75,14 @@ var balanceCmd = &cobra.Command{
 		var finishOutput = false
 
 		for _, addr := range balanceCheckAddresses {
-			balance, err := client.BalanceAt(ctx, common.HexToAddress(addr), nil)
+			balance, err := globalClient.EthClient.BalanceAt(ctx, common.HexToAddress(addr), nil)
 			checkErr(err)
 
 			results = append(results, kv{addr, *balance})
 
 			// print output immediately if no sort demand
 			if balanceSortOpt == sortNo {
-				if terseOutputOpt {
+				if globalOptTerseOutput {
 					fmt.Printf("%v %s\n", addr, wei2Other(bigInt2Decimal(balance), balanceUnit).String())
 				} else {
 					fmt.Printf("addr %v, balance %s %s\n", addr, wei2Other(bigInt2Decimal(balance), balanceUnit).String(), balanceUnit)
@@ -105,7 +103,7 @@ var balanceCmd = &cobra.Command{
 
 		if !finishOutput {
 			for _, result := range results {
-				if terseOutputOpt {
+				if globalOptTerseOutput {
 					fmt.Printf("%v %s\n", result.addr, wei2Other(bigInt2Decimal(&result.balance), balanceUnit).String())
 				} else {
 					fmt.Printf("addr %v, balance %s %s\n", result.addr, wei2Other(bigInt2Decimal(&result.balance), balanceUnit).String(), balanceUnit)

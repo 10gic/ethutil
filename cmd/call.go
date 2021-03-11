@@ -9,7 +9,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
 	"io"
@@ -42,14 +41,13 @@ var callCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		client, err := ethclient.Dial(nodeUrlOpt)
-		checkErr(err)
+		InitGlobalClient(globalOptNodeUrl)
 
 		contractAddr := args[0]
 		funcSignature := args[1]
 		inputArgData := args[2:]
 
-		isContract, err := isContractAddress(client, common.HexToAddress(contractAddr))
+		isContract, err := isContractAddress(globalClient.EthClient, common.HexToAddress(contractAddr))
 		if err != nil {
 			panic(err)
 		}
@@ -74,17 +72,17 @@ var callCmd = &cobra.Command{
 		checkErr(err)
 		// log.Printf("txData=%s", hex.Dump(txData))
 
-		gasPrice, err := client.SuggestGasPrice(context.Background())
+		gasPrice, err := globalClient.EthClient.SuggestGasPrice(context.Background())
 		checkErr(err)
 
-		if privateKeyOpt == "" {
-			log.Fatalf("--private-key is required for contract-call command")
+		if globalOptPrivateKey == "" {
+			log.Fatalf("--private-key is required for call command")
 		} else {
 			var amount = decimal.RequireFromString(callCmdTransferAmt)
 			var amountInWei = unify2Wei(amount, callCmdTransferUnit)
 
 			var contract = common.HexToAddress(contractAddr)
-			tx, err := Transact(client, buildPrivateKeyFromHex(privateKeyOpt), &contract, amountInWei.BigInt(), gasPrice, txData)
+			tx, err := Transact(globalClient.RpcClient, globalClient.EthClient, buildPrivateKeyFromHex(globalOptPrivateKey), &contract, amountInWei.BigInt(), gasPrice, txData)
 			checkErr(err)
 
 			log.Printf("transaction %s finished", tx)
