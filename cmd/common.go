@@ -6,14 +6,15 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/rpc"
 	"io/ioutil"
 	"log"
 	"math/big"
 	"net/http"
 	"regexp"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -63,7 +64,7 @@ func has0xPrefix(str string) bool {
 	return len(str) >= 2 && str[0] == '0' && (str[1] == 'x' || str[1] == 'X')
 }
 
-// isValidHexString returns true if str is a valid hex string.
+// isValidHexString returns true if str is a valid hex string or empty string.
 func isValidHexString(str string) bool {
 	if str == "" {
 		return true
@@ -202,7 +203,7 @@ func getGasPriceFromEthgasstation() (*big.Int, error) {
 }
 
 // SendRawTransaction broadcast signed tx and return tx returned by rpc node
-func SendRawTransaction(rpcClient *rpc.Client, signedTx *types.Transaction) (*common.Hash, error){
+func SendRawTransaction(rpcClient *rpc.Client, signedTx *types.Transaction) (*common.Hash, error) {
 	data, err := signedTx.MarshalBinary()
 	if err != nil {
 		return nil, err

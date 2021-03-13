@@ -3,38 +3,44 @@ package cmd
 import (
 	"crypto/ecdsa"
 	"fmt"
+
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/spf13/cobra"
 	"github.com/tyler-smith/go-bip39"
-	"log"
 )
 
-var dumpAddrPrivateKeyOrMnemonics []string
-
-func init() {
-	dumpAddrCmd.Flags().StringSliceVarP(&dumpAddrPrivateKeyOrMnemonics, "private-key-or-mnemonic", "", []string{}, "the private key or mnemonic your want to dump address, multiple items can separate by comma, the option can be also specified multiple times")
-	_ = dumpAddrCmd.MarkFlagRequired("private-key-or-mnemonic")
-}
-
 var dumpAddrCmd = &cobra.Command{
-	Use:     "dump-address",
+	Use:     "dump-address private-key-or-mnemonics private-key-or-mnemonics ...",
 	Aliases: []string{"dump-addr"},
-	Short:   "Dump address from private key",
+	Short:   "Dump address from private key or mnemonic",
+	Args: func(cmd *cobra.Command, args []string) error {
+		if len(args) < 1 {
+			return fmt.Errorf("requires private-key-or-mnemonics")
+		}
+		for _, arg := range args {
+			if isValidHexString(arg) {
+				continue
+			}
+			if bip39.IsMnemonicValid(arg) {
+				continue
+			}
+			return fmt.Errorf("invalid private-key-or-mnemonics: %v", arg)
+		}
+		return nil
+	},
 	Run: func(cmd *cobra.Command, args []string) {
+		privateKeyOrMnemonics := args
 
-		for _, dumpAddrPrivateKeyOrMnemonic := range dumpAddrPrivateKeyOrMnemonics {
+		for _, dumpAddrPrivateKeyOrMnemonic := range privateKeyOrMnemonics {
 
 			var privateKey *ecdsa.PrivateKey
 			var err error
 			if isValidHexString(dumpAddrPrivateKeyOrMnemonic) {
 				privateKey = buildPrivateKeyFromHex(dumpAddrPrivateKeyOrMnemonic)
 			} else { // mnemonic
-				if !bip39.IsMnemonicValid(dumpAddrPrivateKeyOrMnemonic) {
-					log.Fatalf("invalid mnemonic: %v", dumpAddrPrivateKeyOrMnemonic)
-				}
 				privateKey, err = hdWallet(dumpAddrPrivateKeyOrMnemonic)
 				checkErr(err)
 			}

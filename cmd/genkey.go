@@ -2,11 +2,12 @@ package cmd
 
 import (
 	"fmt"
+	"log"
+	"os"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/spf13/cobra"
-	"log"
-	"os"
 )
 
 var genkeyNumOpt int
@@ -17,7 +18,7 @@ func init() {
 
 var genkeyCmd = &cobra.Command{
 	Use:   "gen-private-key",
-	Short: "Generate eth private key",
+	Short: "Generate eth private key and its address",
 	Run: func(cmd *cobra.Command, args []string) {
 		if genkeyNumOpt <= 0 {
 			_ = cmd.Help()

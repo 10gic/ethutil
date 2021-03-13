@@ -3,21 +3,20 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/spf13/cobra"
-	"log"
-	"os"
 )
 
-var computeContractAddrDeployerAddr string
 var computeContractAddrNonce int64
 var computeContractAddrSalt string
 var computeContractAddrInitCode string
 
 func init() {
-	computeContractAddrCmd.Flags().StringVarP(&computeContractAddrDeployerAddr, "deployer-addr", "", "", "the address of deployer")
 	computeContractAddrCmd.Flags().Int64VarP(&computeContractAddrNonce, "nonce", "", -1, "the nonce, -1 means check online")
 	computeContractAddrCmd.Flags().StringVarP(&computeContractAddrSalt, "salt", "", "", "salt, for CREATE2")
 	computeContractAddrCmd.Flags().StringVarP(&computeContractAddrInitCode, "init-code", "", "", "init code, for CREATE2")
@@ -26,12 +25,6 @@ func init() {
 }
 
 func validationComputeContractAddrCmdOpts() bool {
-	// validation
-	if !isValidEthAddress(computeContractAddrDeployerAddr) {
-		log.Fatalf("%v is not a valid eth address", transferTargetAddr)
-		return false
-	}
-
 	if len(computeContractAddrSalt) == 0 && len(computeContractAddrInitCode) != 0 {
 		log.Fatalf("--salt must also provided")
 		return false
@@ -55,13 +48,27 @@ func validationComputeContractAddrCmdOpts() bool {
 }
 
 var computeContractAddrCmd = &cobra.Command{
-	Use:   "compute-contract-addr",
+	Use:   "compute-contract-addr deployer-address",
 	Short: "Compute contract address before deployment",
+	Args: func(cmd *cobra.Command, args []string) error {
+		if len(args) < 1 {
+			return fmt.Errorf("requires the address of deployer")
+		}
+		if len(args) > 1 {
+			return fmt.Errorf("you can not specify multiple deployers")
+		}
+		if !isValidEthAddress(args[0]) {
+			return fmt.Errorf("%v is not a valid eth address", args[0])
+		}
+		return nil
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		if !validationComputeContractAddrCmdOpts() {
 			_ = cmd.Help()
 			os.Exit(1)
 		}
+
+		deployerAddr := args[0]
 
 		if len(computeContractAddrSalt) == 0 {
 			var nonce uint64
@@ -70,22 +77,22 @@ var computeContractAddrCmd = &cobra.Command{
 				client, err := ethclient.Dial(globalOptNodeUrl)
 				checkErr(err)
 
-				nonce , err = client.PendingNonceAt(context.TODO(), common.HexToAddress(computeContractAddrDeployerAddr))
+				nonce, err = client.PendingNonceAt(context.TODO(), common.HexToAddress(deployerAddr))
 				checkErr(err)
 			} else {
 				nonce = uint64(computeContractAddrNonce)
 			}
-			contractAddr := crypto.CreateAddress(common.HexToAddress(computeContractAddrDeployerAddr), nonce)
+			contractAddr := crypto.CreateAddress(common.HexToAddress(deployerAddr), nonce)
 			fmt.Printf("deployer address %v\nnonce %v\ncontract address %v\n",
-				computeContractAddrDeployerAddr,
+				deployerAddr,
 				computeContractAddrNonce,
 				contractAddr.Hex())
 		} else {
 			var salt32 [32]byte
 			copy(salt32[:], common.FromHex(computeContractAddrSalt))
-			contractAddr := crypto.CreateAddress2(common.HexToAddress(computeContractAddrDeployerAddr), salt32, crypto.Keccak256(common.FromHex(computeContractAddrInitCode)))
+			contractAddr := crypto.CreateAddress2(common.HexToAddress(deployerAddr), salt32, crypto.Keccak256(common.FromHex(computeContractAddrInitCode)))
 			fmt.Printf("deployer address %v\nsalt %v\ninit code %v\ncontract address %v\n",
-				computeContractAddrDeployerAddr,
+				deployerAddr,
 				computeContractAddrSalt,
 				computeContractAddrInitCode,
 				contractAddr.Hex())

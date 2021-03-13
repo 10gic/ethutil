@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"github.com/spf13/cobra"
 	"io/ioutil"
 	"log"
 	"math/big"
 	"strings"
+
+	"github.com/spf13/cobra"
 )
 
 var deployABIFile string

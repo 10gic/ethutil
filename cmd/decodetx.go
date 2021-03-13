@@ -3,8 +3,6 @@ package cmd
 import (
 	"encoding/hex"
 	"fmt"
-	"log"
-	"os"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/core/types"
@@ -13,24 +11,24 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var rawTxHexData string
-
-func init() {
-	decodeRawTxCmd.Flags().StringVarP(&rawTxHexData, "hex-data", "", "", "the hex data (leading 0x is optional) of raw tx")
-	_ = decodeRawTxCmd.MarkFlagRequired("hex-data")
-}
-
-var decodeRawTxCmd = &cobra.Command{
-	Use:   "decode-raw-tx",
+var decodeTxCmd = &cobra.Command{
+	Use:   "decode-tx tx-data",
 	Short: "Decode raw transaction",
+	Args: func(cmd *cobra.Command, args []string) error {
+		if len(args) < 1 {
+			return fmt.Errorf("requires tx-data")
+		}
+		if len(args) > 1 {
+			return fmt.Errorf("multiple tx-data is not supported")
+		}
+
+		if !isValidHexString(args[0]) {
+			return fmt.Errorf("tx-data must hex string")
+		}
+		return nil
+	},
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(rawTxHexData) == 0 {
-			_ = cmd.Help()
-			os.Exit(1)
-		}
-		if !isValidHexString(rawTxHexData) {
-			log.Fatalf("--hex-data must hex string")
-		}
+		rawTxHexData := args[0]
 
 		if strings.HasPrefix(rawTxHexData, "0x") {
 			rawTxHexData = rawTxHexData[2:] // remove leading 0x

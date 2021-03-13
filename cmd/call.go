@@ -6,11 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/shopspring/decimal"
-	"github.com/spf13/cobra"
 	"io"
 	"io/ioutil"
 	"log"
@@ -19,6 +14,12 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/shopspring/decimal"
+	"github.com/spf13/cobra"
 )
 
 var callCmdABIFile string
@@ -794,13 +795,13 @@ func typeNormalize(input string) string {
 // ......
 // ]
 type AbiData struct {
-	Inputs []struct{
+	Inputs []struct {
 		Name string `json:"name"`
 		Type string `json:"type"`
 	} `json:"inputs"`
-	Name string `json:"name"`
-	Type string `json:"type"` // constructor, function, etc.
-	Outputs []struct{
+	Name    string `json:"name"`
+	Type    string `json:"type"` // constructor, function, etc.
+	Outputs []struct {
 		Name string `json:"name"`
 		Type string `json:"type"`
 	} `json:"outputs"`
@@ -854,7 +855,7 @@ func extractFuncDefinition(abi string, funcName string) (string, error) {
 			for index, input := range item.Inputs {
 				ret += input.Type
 
-				if index < len(item.Inputs) - 1 { // not the last input
+				if index < len(item.Inputs)-1 { // not the last input
 					ret += ", "
 				}
 			}
@@ -878,7 +879,7 @@ func extractFuncDefinition(abi string, funcName string) (string, error) {
 		}
 	}
 
-	if ! foundFunc {
+	if !foundFunc {
 		return "", fmt.Errorf("function %v not found in ABI", funcName)
 	}
 

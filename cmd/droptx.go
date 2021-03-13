@@ -1,9 +1,10 @@
 package cmd
 
 import (
-	"github.com/spf13/cobra"
 	"log"
 	"math/big"
+
+	"github.com/spf13/cobra"
 )
 
 var dropTxCmd = &cobra.Command{
@@ -22,7 +23,7 @@ var dropTxCmd = &cobra.Command{
 		gasPrice, err := getGasPrice(globalClient.EthClient)
 		checkErr(err)
 
-		gasPrice.Add(gasPrice, big.NewInt(10 * 1000000000)) // plus 10 gwei
+		gasPrice.Add(gasPrice, big.NewInt(10*1000000000)) // plus 10 gwei
 		log.Printf("gas price change to %v wei", gasPrice)
 
 		addr := extractAddressFromPrivateKey(buildPrivateKeyFromHex(globalOptPrivateKey)).String()

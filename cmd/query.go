@@ -2,14 +2,15 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/spf13/cobra"
 	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/spf13/cobra"
 )
 
 var queryCmdABIFile string
@@ -21,7 +22,7 @@ func init() {
 var queryCmd = &cobra.Command{
 	Use:   "query contract_address 'function definition' arg1 arg2 ...",
 	Short: "Invokes the (constant) contract method",
-	Args: cobra.MinimumNArgs(2),
+	Args:  cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		if !validationQueryCmdOpts(args) {
 			_ = cmd.Help()
@@ -80,7 +81,7 @@ var queryCmd = &cobra.Command{
 					fmt.Printf("%v = [", returnArg.Name)
 					for index, address := range addresses {
 						fmt.Printf("%v", address.Hex())
-						if index < len(addresses) - 1 {
+						if index < len(addresses)-1 {
 							fmt.Printf(" ") // separator
 						}
 					}
@@ -138,7 +139,7 @@ func buildReturnArgs(funcDefinition string) (abi.Arguments, error) {
 			return nil, fmt.Errorf("abi.NewType fail: %w", err)
 		}
 
-		theReturnName := "ret"+ strconv.FormatInt(int64(index),10) // default name ret0, ret1, etc
+		theReturnName := "ret" + strconv.FormatInt(int64(index), 10) // default name ret0, ret1, etc
 		if len(fields) > 1 {
 			if fields[1] == "memory" || fields[1] == "calldata" {
 				// skip keyword "memory" and "calldata"

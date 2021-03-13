@@ -3,16 +3,16 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/spf13/cobra"
 	"log"
 	"math/big"
 	"os"
 	"sort"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/spf13/cobra"
 )
 
 var balanceSortOpt string
-var balanceCheckAddresses []string
 var balanceUnit string
 
 const sortNo = "no"
@@ -25,10 +25,7 @@ const unitEther = "ether"
 
 func init() {
 	balanceCmd.Flags().StringVarP(&balanceSortOpt, "sort", "s", "no", "no | asc | desc, sort result")
-	balanceCmd.Flags().StringSliceVarP(&balanceCheckAddresses, "addr", "a", []string{}, "the eth address your want to check, multiple addresses can separate by comma, the option can be also specified multiple times")
 	balanceCmd.Flags().StringVarP(&balanceUnit, "unit", "u", "ether", "wei | gwei | ether, unit of balance")
-
-	_ = balanceCmd.MarkFlagRequired("addr")
 }
 
 func validationBalanceCmdOpts() bool {
@@ -43,38 +40,44 @@ func validationBalanceCmdOpts() bool {
 		return false
 	}
 
-	for _, addr := range balanceCheckAddresses {
-		if ! isValidEthAddress(addr) {
-			log.Printf("%v is not a valid eth address", addr)
-			return false
-		}
-	}
-
 	return true
 }
 
 var balanceCmd = &cobra.Command{
-	Use:   "balance",
+	Use:   "balance eth-address1 eth-address2 ...",
 	Short: "Check eth balance for address",
+	Args: func(cmd *cobra.Command, args []string) error {
+		if len(args) < 1 {
+			return fmt.Errorf("requires an address at least")
+		}
+		for _, arg := range args {
+			if !isValidEthAddress(arg) {
+				return fmt.Errorf("%v is not a valid eth address", arg)
+			}
+		}
+		return nil
+	},
 	Run: func(cmd *cobra.Command, args []string) {
-		if ! validationBalanceCmdOpts() {
+		if !validationBalanceCmdOpts() {
 			_ = cmd.Help()
 			os.Exit(1)
 		}
+
+		addresses := args
 
 		InitGlobalClient(globalOptNodeUrl)
 
 		ctx := context.Background()
 
 		type kv struct {
-			addr   string
+			addr    string
 			balance big.Int
 		}
 
 		var results []kv
 		var finishOutput = false
 
-		for _, addr := range balanceCheckAddresses {
+		for _, addr := range addresses {
 			balance, err := globalClient.EthClient.BalanceAt(ctx, common.HexToAddress(addr), nil)
 			checkErr(err)
 

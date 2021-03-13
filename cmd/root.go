@@ -1,11 +1,11 @@
 package cmd
 
 import (
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/rpc"
 	"log"
 	"os"
 
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
 )
@@ -80,6 +80,7 @@ func Execute() error {
 }
 
 func init() {
+	cobra.EnableCommandSorting = false
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVarP(&globalOptNodeUrl, "node-url", "", "", "the target connection node url, if this option specified, the --node option is ignored")
@@ -93,14 +94,14 @@ func init() {
 
 	rootCmd.AddCommand(balanceCmd)
 	rootCmd.AddCommand(transferCmd)
-	rootCmd.AddCommand(decodeRawTxCmd)
-	rootCmd.AddCommand(dropTxCmd)
-	rootCmd.AddCommand(genkeyCmd)
-	rootCmd.AddCommand(dumpAddrCmd)
 	rootCmd.AddCommand(callCmd)
 	rootCmd.AddCommand(queryCmd)
 	rootCmd.AddCommand(deployCmd)
+	rootCmd.AddCommand(dropTxCmd)
+	rootCmd.AddCommand(genkeyCmd)
+	rootCmd.AddCommand(dumpAddrCmd)
 	rootCmd.AddCommand(computeContractAddrCmd)
+	rootCmd.AddCommand(decodeTxCmd)
 }
 
 func initConfig() {

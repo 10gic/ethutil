@@ -2,42 +2,32 @@ package cmd
 
 import (
 	"context"
+	"fmt"
+	"log"
+	"math/big"
+	"os"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
-	"log"
-	"math/big"
-	"os"
 )
 
-var transferTargetAddr string
 var transferUnit string
-var transferAmt string
 var transferNotCheck bool
 var transferHexData string
 
 func init() {
-	transferCmd.Flags().StringVarP(&transferTargetAddr, "to-addr", "t", "", "the target address you want to transfer eth")
 	transferCmd.Flags().StringVarP(&transferUnit, "unit", "u", "ether", "wei | gwei | ether, unit of amount")
-	transferCmd.Flags().StringVarP(&transferAmt, "amount", "n", "", "the amount you want to transfer, special word \"all\" means all balance would transfer to target address, unit is specified by --unit")
 	transferCmd.Flags().BoolVarP(&transferNotCheck, "not-check", "", false, "don't check result, return immediately after send transaction")
 	transferCmd.Flags().StringVarP(&transferHexData, "hex-data", "", "", "the payload hex data when transfer")
-
-	_ = transferCmd.MarkFlagRequired("to-addr")
-	_ = transferCmd.MarkFlagRequired("amount")
 }
 
 func validationTransferCmdOpts() bool {
 	// validation
 	if !contains([]string{unitWei, unitGwei, unitEther}, transferUnit) {
 		log.Fatalf("invalid option for --unit: %v", transferUnit)
-		return false
-	}
-
-	if ! isValidEthAddress(transferTargetAddr) {
-		log.Fatalf("%v is not a valid eth address", transferTargetAddr)
 		return false
 	}
 
@@ -82,13 +72,46 @@ func getGasPrice(client *ethclient.Client) (*big.Int, error) {
 }
 
 var transferCmd = &cobra.Command{
-	Use:   "transfer",
-	Short: "Transfer eth to another address",
+	Use:   "transfer target-address amount",
+	Short: "Transfer amount of eth to target-address",
+	Long: "Transfer amount of eth to target-address, special word `all` is valid amount. unit is ether, can be changed by --unit.",
+	Args: func(cmd *cobra.Command, args []string) error {
+		if len(args) < 1 {
+			return fmt.Errorf("requires target-address and amount")
+		}
+		if len(args) == 1 {
+			return fmt.Errorf("requires amount")
+		}
+		if len(args) > 2 {
+			return fmt.Errorf("too many args")
+		}
+
+		targetAddress := args[0]
+		amount := args[1]
+
+		if !isValidEthAddress(targetAddress) {
+			return fmt.Errorf("%v is not a valid eth address", targetAddress)
+		}
+
+		if amount == "all" {
+			return nil
+		} else {
+			_, err := decimal.NewFromString(amount)
+			if err != nil {
+				return fmt.Errorf("%v is not a valid amount", amount)
+			}
+		}
+
+		return nil
+	},
 	Run: func(cmd *cobra.Command, args []string) {
-		if ! validationTransferCmdOpts() {
+		if !validationTransferCmdOpts() {
 			_ = cmd.Help()
 			os.Exit(1)
 		}
+
+		transferAmt := args[0]
+		transferTargetAddr := args[1]
 
 		InitGlobalClient(globalOptNodeUrl)
 
