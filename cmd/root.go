@@ -102,6 +102,7 @@ func init() {
 	rootCmd.AddCommand(dumpAddrCmd)
 	rootCmd.AddCommand(computeContractAddrCmd)
 	rootCmd.AddCommand(decodeTxCmd)
+	rootCmd.AddCommand(getCodeCmd)
 }
 
 func initConfig() {
