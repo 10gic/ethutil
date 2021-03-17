@@ -106,6 +106,7 @@ func init() {
 	rootCmd.AddCommand(computeContractAddrCmd)
 	rootCmd.AddCommand(decodeTxCmd)
 	rootCmd.AddCommand(getCodeCmd)
+	rootCmd.AddCommand(erc20Cmd)
 }
 
 func initConfig() {

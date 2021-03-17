@@ -23,7 +23,7 @@ func init() {
 }
 
 var callCmd = &cobra.Command{
-	Use:   "call contract_address 'function signature' arg1 arg2 ...",
+	Use:   "call contract-address 'function signature' arg1 arg2 ...",
 	Short: "Invokes the (paid) contract method",
 	Args:  cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -43,9 +43,7 @@ var callCmd = &cobra.Command{
 			panic(err)
 		}
 		if !isContract {
-			log.Printf("%v is NOT a contract address", contractAddr)
-			_ = cmd.Help()
-			os.Exit(1)
+			log.Fatalf("%v is NOT a contract address, can not find it from blockchain", contractAddr)
 		}
 
 		if callCmdABIFile != "" {

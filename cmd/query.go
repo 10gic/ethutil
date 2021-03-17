@@ -33,7 +33,7 @@ var queryCmd = &cobra.Command{
 		InitGlobalClient(globalOptNodeUrl)
 
 		contractAddr := args[0]
-		funcDefinition := args[1]
+		funcSignature := args[1]
 		inputArgData := args[2:]
 
 		isContract, err := isContractAddress(globalClient.EthClient, common.HexToAddress(contractAddr))
@@ -41,9 +41,7 @@ var queryCmd = &cobra.Command{
 			panic(err)
 		}
 		if !isContract {
-			log.Printf("%v is NOT a contract address", contractAddr)
-			_ = cmd.Help()
-			os.Exit(1)
+			log.Fatalf("%v is NOT a contract address, can not find it from blockchain", contractAddr)
 		}
 
 		if queryCmdABIFile != "" {
@@ -51,13 +49,13 @@ var queryCmd = &cobra.Command{
 			if err != nil {
 				log.Fatal(err)
 			}
-			funcName := funcDefinition
-			funcDefinition, err = extractFuncDefinition(string(abiContent), extractFuncName(funcName))
+			funcName := funcSignature
+			funcSignature, err = extractFuncDefinition(string(abiContent), extractFuncName(funcName))
 			checkErr(err)
 			// log.Printf("extract func definition from abi: %v", funcDefinition)
 		}
 
-		txInputData, err := buildTxInputData(funcDefinition, inputArgData)
+		txInputData, err := buildTxInputData(funcSignature, inputArgData)
 		checkErr(err)
 
 		if globalOptShowInputData {
@@ -67,40 +65,44 @@ var queryCmd = &cobra.Command{
 		output, err := Call(globalClient.EthClient, common.HexToAddress(contractAddr), txInputData)
 		checkErr(err)
 
-		var v = make(map[string]interface{})
-		returnArgs, err := buildReturnArgs(funcDefinition)
-		checkErr(err)
+		printContractReturnData(funcSignature, output)
+	},
+}
 
-		// Unpack hex data into v
-		err = returnArgs.UnpackIntoMap(v, output)
-		checkErr(err)
+func printContractReturnData(funcDefinition string, output []byte) {
+	var v = make(map[string]interface{})
+	returnArgs, err := buildReturnArgs(funcDefinition)
+	checkErr(err)
 
-		for _, returnArg := range returnArgs {
-			// fmt.Printf("type of v: %v\n", reflect.TypeOf(v[returnArg.Name]))
-			if returnArg.Type.T == abi.AddressTy {
-				fmt.Printf("%v = %v\n", returnArg.Name, v[returnArg.Name].(common.Address).Hex())
-			} else if returnArg.Type.T == abi.SliceTy {
-				if returnArg.Type.Elem.T == abi.AddressTy { // element is address
-					addresses := v[returnArg.Name].([]common.Address)
+	// Unpack hex data into v
+	err = returnArgs.UnpackIntoMap(v, output)
+	checkErr(err)
 
-					fmt.Printf("%v = [", returnArg.Name)
-					for index, address := range addresses {
-						fmt.Printf("%v", address.Hex())
-						if index < len(addresses)-1 {
-							fmt.Printf(" ") // separator
-						}
+	for _, returnArg := range returnArgs {
+		// fmt.Printf("type of v: %v\n", reflect.TypeOf(v[returnArg.Name]))
+		if returnArg.Type.T == abi.AddressTy {
+			fmt.Printf("%v = %v\n", returnArg.Name, v[returnArg.Name].(common.Address).Hex())
+		} else if returnArg.Type.T == abi.SliceTy {
+			if returnArg.Type.Elem.T == abi.AddressTy { // element is address
+				addresses := v[returnArg.Name].([]common.Address)
+
+				fmt.Printf("%v = [", returnArg.Name)
+				for index, address := range addresses {
+					fmt.Printf("%v", address.Hex())
+					if index < len(addresses)-1 {
+						fmt.Printf(" ") // separator
 					}
-					fmt.Printf("]")
-				} else {
-					fmt.Printf("%v = %v\n", returnArg.Name, v[returnArg.Name])
 				}
+				fmt.Printf("]")
 			} else {
 				fmt.Printf("%v = %v\n", returnArg.Name, v[returnArg.Name])
 			}
+		} else {
+			fmt.Printf("%v = %v\n", returnArg.Name, v[returnArg.Name])
 		}
+	}
 
-		// fmt.Printf("raw output:\n%s\n", hex.Dump(output))
-	},
+	// fmt.Printf("raw output:\n%s\n", hex.Dump(output))
 }
 
 func validationQueryCmdOpts(args []string) bool {
