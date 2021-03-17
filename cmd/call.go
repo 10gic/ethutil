@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"io"
 	"io/ioutil"
 	"log"
@@ -114,6 +115,10 @@ func buildTxData(funcSignature string, inputArgData []string) ([]byte, error) {
 	data, err := encodeParameters(funcArgTypes, inputArgData)
 	if err != nil {
 		return nil, fmt.Errorf("encodeParameters fail: %v", err)
+	}
+
+	if globalOptShowInputData {
+		log.Printf("input data = %v", hexutil.Encode(append(functionSelector, data...)))
 	}
 	return append(functionSelector, data...), nil
 }
