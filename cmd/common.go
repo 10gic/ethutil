@@ -202,19 +202,25 @@ func getGasPriceFromEthgasstation() (*big.Int, error) {
 	return gasPrice, nil
 }
 
+// GenRawTx return raw tx, a hex string with 0x prefix
+func GenRawTx(signedTx *types.Transaction) (string, error) {
+	data, err := signedTx.MarshalBinary()
+	if err != nil {
+		return "", err
+	}
+
+	return hexutil.Encode(data), nil
+}
+
 // SendRawTransaction broadcast signed tx and return tx returned by rpc node
 func SendRawTransaction(rpcClient *rpc.Client, signedTx *types.Transaction) (*common.Hash, error) {
-	data, err := signedTx.MarshalBinary()
+	rawTx, err := GenRawTx(signedTx)
 	if err != nil {
 		return nil, err
 	}
 
-	if globalOptShowRawTx {
-		log.Printf("raw tx = %v", hexutil.Encode(data))
-	}
-
 	var result hexutil.Bytes
-	err = rpcClient.CallContext(context.Background(), &result, "eth_sendRawTransaction", hexutil.Encode(data))
+	err = rpcClient.CallContext(context.Background(), &result, "eth_sendRawTransaction", rawTx)
 	if err != nil {
 		return nil, err
 	}
@@ -270,7 +276,13 @@ func Transact(rpcClient *rpc.Client, client *ethclient.Client, privateKey *ecdsa
 		return "", fmt.Errorf("SignTx fail: %w", err)
 	}
 
+	if globalOptShowRawTx {
+		rawTx, _ := GenRawTx(signedTx)
+		log.Printf("raw tx = %v", rawTx)
+	}
+
 	if globalOptDryRun {
+		// return tx directly, do not broadcast it
 		return signedTx.Hash().String(), nil
 	}
 
