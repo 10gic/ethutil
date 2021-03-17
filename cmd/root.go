@@ -100,6 +100,7 @@ func init() {
 	rootCmd.AddCommand(queryCmd)
 	rootCmd.AddCommand(deployCmd)
 	rootCmd.AddCommand(dropTxCmd)
+	rootCmd.AddCommand(encodeParamCmd)
 	rootCmd.AddCommand(genkeyCmd)
 	rootCmd.AddCommand(dumpAddrCmd)
 	rootCmd.AddCommand(computeContractAddrCmd)

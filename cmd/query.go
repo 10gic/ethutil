@@ -10,6 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/spf13/cobra"
 )
 
@@ -56,10 +57,14 @@ var queryCmd = &cobra.Command{
 			// log.Printf("extract func definition from abi: %v", funcDefinition)
 		}
 
-		txData, err := buildTxData(funcDefinition, inputArgData)
+		txInputData, err := buildTxInputData(funcDefinition, inputArgData)
 		checkErr(err)
 
-		output, err := Call(globalClient.EthClient, common.HexToAddress(contractAddr), txData)
+		if globalOptShowInputData {
+			log.Printf("input data = %v", hexutil.Encode(txInputData))
+		}
+
+		output, err := Call(globalClient.EthClient, common.HexToAddress(contractAddr), txInputData)
 		checkErr(err)
 
 		var v = make(map[string]interface{})

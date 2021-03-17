@@ -40,6 +40,6 @@ var getCodeCmd = &cobra.Command{
 			return
 		}
 
-		log.Printf("runtime bytecode of contract %v is %v", contractAddress, hexutil.Encode(byteCode))
+		fmt.Printf("runtime bytecode of contract %v is %v\n", contractAddress, hexutil.Encode(byteCode))
 	},
 }
