@@ -87,18 +87,18 @@ var transferCmd = &cobra.Command{
 		}
 
 		targetAddress := args[0]
-		amount := args[1]
+		transferAmt := args[1]
 
 		if !isValidEthAddress(targetAddress) {
 			return fmt.Errorf("%v is not a valid eth address", targetAddress)
 		}
 
-		if amount == "all" {
+		if transferAmt == "all" {
 			return nil
 		} else {
-			_, err := decimal.NewFromString(amount)
+			_, err := decimal.NewFromString(transferAmt)
 			if err != nil {
-				return fmt.Errorf("%v is not a valid amount", amount)
+				return fmt.Errorf("%v is not a valid amount", transferAmt)
 			}
 		}
 
@@ -110,8 +110,8 @@ var transferCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		transferAmt := args[0]
-		transferTargetAddr := args[1]
+		targetAddress := args[0]
+		transferAmt := args[1]
 
 		InitGlobalClient(globalOptNodeUrl)
 
@@ -145,7 +145,7 @@ var transferCmd = &cobra.Command{
 			amountInWei = unify2Wei(amount, transferUnit)
 		}
 
-		if tx, err := TransferHelper(globalClient.RpcClient, globalClient.EthClient, globalOptPrivateKey, transferTargetAddr, amountInWei.BigInt(), gasPrice, common.FromHex(transferHexData)); err != nil {
+		if tx, err := TransferHelper(globalClient.RpcClient, globalClient.EthClient, globalOptPrivateKey, targetAddress, amountInWei.BigInt(), gasPrice, common.FromHex(transferHexData)); err != nil {
 			log.Fatalf("transfer fail: %v", err)
 		} else {
 			log.Printf("transfer finished, tx = %v", tx)
