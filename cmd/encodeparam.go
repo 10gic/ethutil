@@ -543,7 +543,10 @@ func buildArgumentAndData(inputArgTypes, inputArgData []string) (abi.Arguments, 
 				return nil, nil, fmt.Errorf("arg (position %v) invalid, %s cannot covert to type %v", index, inputArgData[index], inputType)
 			}
 			theArgData = append(theArgData, uint64(i))
-		} else if strings.Contains(inputType, "int") { // 其它包含 int 的情况，如 int24, int256, uint48, uint256, etc
+		} else if strings.Contains(inputType, "int") { // other cases: int24, int40, ..., int256, uint24, uint40, ..., uint256, etc
+			if !isValidInt(inputType) {
+				return nil, nil, fmt.Errorf("type %v not a valid type", inputType)
+			}
 			n := new(big.Int)
 			n, ok := n.SetString(inputArgData[index], 10)
 			if !ok {
@@ -881,4 +884,79 @@ func extractFuncDefinition(abi string, funcName string) (string, error) {
 
 	// Example of ret: `f1(uint256[], address[]) returns (uint256)`
 	return ret, nil
+}
+
+// isValidInt return true if intType is valid solidity int type
+func isValidInt(intType string) bool {
+	switch intType {
+	case
+		"int",
+		"int8",
+		"int16",
+		"int24",
+		"int32",
+		"int40",
+		"int48",
+		"int56",
+		"int64",
+		"int72",
+		"int80",
+		"int88",
+		"int96",
+		"int104",
+		"int112",
+		"int120",
+		"int128",
+		"int136",
+		"int144",
+		"int152",
+		"int160",
+		"int168",
+		"int176",
+		"int184",
+		"int192",
+		"int200",
+		"int208",
+		"int216",
+		"int224",
+		"int232",
+		"int240",
+		"int248",
+		"int256",
+		"uint",
+		"uint8",
+		"uint16",
+		"uint24",
+		"uint32",
+		"uint40",
+		"uint48",
+		"uint56",
+		"uint64",
+		"uint72",
+		"uint80",
+		"uint88",
+		"uint96",
+		"uint104",
+		"uint112",
+		"uint120",
+		"uint128",
+		"uint136",
+		"uint144",
+		"uint152",
+		"uint160",
+		"uint168",
+		"uint176",
+		"uint184",
+		"uint192",
+		"uint200",
+		"uint208",
+		"uint216",
+		"uint224",
+		"uint232",
+		"uint240",
+		"uint248",
+		"uint256":
+		return true
+	}
+	return false
 }
