@@ -36,6 +36,7 @@ Flags:
   -h, --help                 help for ethutil
       --node string          mainnet | ropsten | kovan | rinkeby | sokol, the node type (default "kovan")
       --node-url string      the target connection node url, if this option specified, the --node option is ignored
+      --nonce int            the nonce, -1 means check online (default -1)
   -k, --private-key string   the private key, eth would be send from this account
       --show-input-data      print input data of tx
       --show-raw-tx          print raw signed tx
@@ -154,7 +155,7 @@ private key 0xef065dcbc43081c63c0fbf389ec8df3872d9d61b1bc2e98d7a0a4395d11314d2, 
 ## Compute Contract Address
 Compute contract address before deployment:
 ```shell
-$ ethutil compute-contract-addr --deployer-addr 0x8F36975cdeA2e6E64f85719788C8EFBBe89DFBbb --nonce 0
+$ ethutil compute-contract-addr 0x8F36975cdeA2e6E64f85719788C8EFBBe89DFBbb --nonce 0
 deployer address 0x8F36975cdeA2e6E64f85719788C8EFBBe89DFBbb
 nonce 0
 contract address 0x3bb8C061Ec6EdB3E78777b983b96468CC4799888 
@@ -162,7 +163,7 @@ contract address 0x3bb8C061Ec6EdB3E78777b983b96468CC4799888
 
 Compute contract address (CREATE2) before deployment:
 ```shell
-$ ethutil compute-contract-addr --deployer-addr 0x0000000000000000000000000000000000000000 --salt 0x0000000000000000000000000000000000000000000000000000000000000000 --init-code 0x00
+$ ethutil compute-contract-addr 0x0000000000000000000000000000000000000000 --salt 0x0000000000000000000000000000000000000000000000000000000000000000 --init-code 0x00
 deployer address 0x0000000000000000000000000000000000000000
 salt 0x0000000000000000000000000000000000000000000000000000000000000000
 init code 0x00

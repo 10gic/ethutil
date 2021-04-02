@@ -12,16 +12,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var computeContractAddrNonce int64
 var computeContractAddrSalt string
 var computeContractAddrInitCode string
 
 func init() {
-	computeContractAddrCmd.Flags().Int64VarP(&computeContractAddrNonce, "nonce", "", -1, "the nonce, -1 means check online")
 	computeContractAddrCmd.Flags().StringVarP(&computeContractAddrSalt, "salt", "", "", "salt, for CREATE2")
 	computeContractAddrCmd.Flags().StringVarP(&computeContractAddrInitCode, "init-code", "", "", "init code, for CREATE2")
-
-	_ = computeContractAddrCmd.MarkFlagRequired("deployer-addr")
 }
 
 func validationComputeContractAddrCmdOpts() bool {
@@ -72,7 +68,7 @@ var computeContractAddrCmd = &cobra.Command{
 
 		if len(computeContractAddrSalt) == 0 {
 			var nonce uint64
-			if computeContractAddrNonce < 0 {
+			if globalOptNonce < 0 {
 				// get nonce online
 				client, err := ethclient.Dial(globalOptNodeUrl)
 				checkErr(err)
@@ -80,12 +76,12 @@ var computeContractAddrCmd = &cobra.Command{
 				nonce, err = client.PendingNonceAt(context.TODO(), common.HexToAddress(deployerAddr))
 				checkErr(err)
 			} else {
-				nonce = uint64(computeContractAddrNonce)
+				nonce = uint64(globalOptNonce)
 			}
 			contractAddr := crypto.CreateAddress(common.HexToAddress(deployerAddr), nonce)
 			fmt.Printf("deployer address %v\nnonce %v\ncontract address %v\n",
 				deployerAddr,
-				computeContractAddrNonce,
+				globalOptNonce,
 				contractAddr.Hex())
 		} else {
 			var salt32 [32]byte

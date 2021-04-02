@@ -15,6 +15,7 @@ var (
 	globalOptNode          string
 	globalOptGasPrice      string
 	globalOptGasLimit      uint64
+	globalOptNonce         int64
 	globalOptPrivateKey    string
 	globalOptTerseOutput   bool
 	globalOptDryRun        bool
@@ -88,6 +89,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&globalOptNode, "node", "", "kovan", "mainnet | ropsten | kovan | rinkeby | sokol, the node type")
 	rootCmd.PersistentFlags().StringVarP(&globalOptGasPrice, "gas-price", "", "", "the gas price, unit is gwei.")
 	rootCmd.PersistentFlags().Uint64VarP(&globalOptGasLimit, "gas-limit", "", 0, "the gas limit")
+	rootCmd.PersistentFlags().Int64VarP(&globalOptNonce, "nonce", "", -1, "the nonce, -1 means check online")
 	rootCmd.PersistentFlags().StringVarP(&globalOptPrivateKey, "private-key", "k", "", "the private key, eth would be send from this account")
 	rootCmd.PersistentFlags().BoolVarP(&globalOptTerseOutput, "terse", "", false, "produce terse output")
 	rootCmd.PersistentFlags().BoolVarP(&globalOptDryRun, "dry-run", "", false, "do not broadcast tx")

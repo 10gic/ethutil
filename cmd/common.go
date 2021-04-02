@@ -233,9 +233,15 @@ func SendRawTransaction(rpcClient *rpc.Client, signedTx *types.Transaction) (*co
 func Transact(rpcClient *rpc.Client, client *ethclient.Client, privateKey *ecdsa.PrivateKey, toAddress *common.Address, amount *big.Int, gasPrice *big.Int, data []byte) (string, error) {
 	fromAddress := extractAddressFromPrivateKey(privateKey)
 
-	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
-	if err != nil {
-		return "", fmt.Errorf("PendingNonceAt fail: %w", err)
+	var nonce uint64
+	var err error
+	if globalOptNonce < 0 {
+		nonce, err = client.PendingNonceAt(context.Background(), fromAddress)
+		if err != nil {
+			return "", fmt.Errorf("PendingNonceAt fail: %w", err)
+		}
+	} else {
+		nonce = uint64(globalOptNonce)
 	}
 
 	gasLimit := globalOptGasLimit
