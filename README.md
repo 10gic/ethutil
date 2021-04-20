@@ -212,3 +212,7 @@ Example of transfer ERC20:
 ```shell
 $ ethutil --node mainnet --private-key 0xXXXX erc20 0xdac17f958d2ee523a2206206994597c13d831ec7 transfer 0x8F36975cdeA2e6E64f85719788C8EFBBe89DFBbb 1000000
 ```
+
+# Issue
+## daily request count exceeded, request rate limited
+If `panic: daily request count exceeded, request rate limited` appears, please use your own node url. It can be changed by option `--node-url`, for example `--node-url wss://mainnet.infura.io/ws/v3/YOUR_INFURA_PROJECT_ID`
