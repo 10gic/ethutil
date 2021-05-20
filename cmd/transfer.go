@@ -61,7 +61,7 @@ func getGasPrice(client *ethclient.Client) (*big.Int, error) {
 
 	if globalOptNode == nodeMainnet {
 		// in case of mainnet, get gap price from ethgasstation
-		gasPrice, err = getGasPriceFromEthgasstation()
+		gasPrice, err = getGasPriceFromEthGasStation()
 		if err != nil {
 			log.Fatalf("getGasPrice fail: %s", err)
 		}

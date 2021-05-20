@@ -166,9 +166,9 @@ recheck:
 	goto recheck
 }
 
-const EthGasstationUrl = "https://ethgasstation.info/json/ethgasAPI.json"
+const EthGasStationUrl = "https://ethgasstation.info/json/ethgasAPI.json"
 
-// GasStationPrice, the struct of response of EthGasstationUrl
+// GasStationPrice, the struct of response of EthGasStationUrl
 type GasStationPrice struct {
 	Fast        float64
 	Fastest     float64
@@ -180,10 +180,10 @@ type GasStationPrice struct {
 	FastestWait float64
 }
 
-// getGasPrice, get gas price from EthGasstationUrl, built-in method client.SuggestGasPrice is not good enough.
-func getGasPriceFromEthgasstation() (*big.Int, error) {
+// getGasPrice, get gas price from EthGasStationUrl, built-in method client.SuggestGasPrice is not good enough.
+func getGasPriceFromEthGasStation() (*big.Int, error) {
 	var gasStationPrice GasStationPrice
-	resp, err := http.Get(EthGasstationUrl)
+	resp, err := http.Get(EthGasStationUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -265,12 +265,14 @@ func Transact(rpcClient *rpc.Client, client *ethclient.Client, privateKey *ecdsa
 	}
 
 	var tx *types.Transaction
-	if toAddress == nil {
-		// send data to null address means deploy contract
-		tx = types.NewContractCreation(nonce, amount, gasLimit, gasPrice, data)
-	} else {
-		tx = types.NewTransaction(nonce, *toAddress, amount, gasLimit, gasPrice, data)
-	}
+	tx = types.NewTx(&types.LegacyTx{
+		Nonce:    nonce,
+		To:       toAddress, // nil means contract creation
+		Value:    amount,
+		Gas:      gasLimit,
+		GasPrice: gasPrice,
+		Data:     data,
+	})
 
 	chainID, err := client.NetworkID(context.Background())
 	if err != nil {
@@ -280,6 +282,23 @@ func Transact(rpcClient *rpc.Client, client *ethclient.Client, privateKey *ecdsa
 	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
 	if err != nil {
 		return "", fmt.Errorf("SignTx fail: %w", err)
+	}
+
+	if globalOptShowEstimateGas {
+		// EstimateGas
+		msg := ethereum.CallMsg{
+			From:     fromAddress,
+			To:       toAddress,
+			Gas:      gasLimit,
+			GasPrice: gasPrice,
+			Value:    amount,
+			Data:     data,
+		}
+		gas, err := client.EstimateGas(context.Background(), msg)
+		if err != nil {
+			return "", fmt.Errorf("EstimateGas fail: %w", err)
+		}
+		log.Printf("estimate gas = %v", gas)
 	}
 
 	if globalOptShowRawTx {

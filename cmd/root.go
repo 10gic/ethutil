@@ -11,17 +11,18 @@ import (
 )
 
 var (
-	globalOptNodeUrl       string
-	globalOptNode          string
-	globalOptGasPrice      string
-	globalOptGasLimit      uint64
-	globalOptNonce         int64
-	globalOptPrivateKey    string
-	globalOptTerseOutput   bool
-	globalOptDryRun        bool
-	globalOptShowRawTx     bool
-	globalOptShowInputData bool
-	rootCmd                = &cobra.Command{
+	globalOptNodeUrl         string
+	globalOptNode            string
+	globalOptGasPrice        string
+	globalOptGasLimit        uint64
+	globalOptNonce           int64
+	globalOptPrivateKey      string
+	globalOptTerseOutput     bool
+	globalOptDryRun          bool
+	globalOptShowRawTx       bool
+	globalOptShowInputData   bool
+	globalOptShowEstimateGas bool
+	rootCmd                  = &cobra.Command{
 		Use:   "ethutil",
 		Short: "An Ethereum util, can transfer eth, check balance, drop pending tx, etc",
 	}
@@ -95,6 +96,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&globalOptDryRun, "dry-run", "", false, "do not broadcast tx")
 	rootCmd.PersistentFlags().BoolVarP(&globalOptShowRawTx, "show-raw-tx", "", false, "print raw signed tx")
 	rootCmd.PersistentFlags().BoolVarP(&globalOptShowInputData, "show-input-data", "", false, "print input data of tx")
+	rootCmd.PersistentFlags().BoolVarP(&globalOptShowEstimateGas, "show-estimate-gas", "", false, "print estimate gas of tx")
 
 	rootCmd.AddCommand(balanceCmd)
 	rootCmd.AddCommand(transferCmd)

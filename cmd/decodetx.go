@@ -58,12 +58,13 @@ var decodeTxCmd = &cobra.Command{
 		fmt.Printf("r (hex) = %x\n", r)
 		fmt.Printf("s (hex) = %x\n", s)
 
-		fmt.Printf("\nderived info:\n")
+		fmt.Printf("\n")
+		fmt.Printf("derived info:\n")
 		fmt.Printf("txid (hex) = %x\n", tx.Hash().Bytes())
 		var chainId = tx.ChainId()
 
 		// build msg (hash of data) before sign
-		singer := types.NewEIP155Signer(chainId)
+		singer := types.NewEIP2930Signer(chainId)
 		hash := singer.Hash(tx)
 		fmt.Printf("hash before ecdsa sign (hex) = %x\n", hash.Bytes())
 
