@@ -38,6 +38,7 @@ Flags:
       --node-url string      the target connection node url, if this option specified, the --node option is ignored
       --nonce int            the nonce, -1 means check online (default -1)
   -k, --private-key string   the private key, eth would be send from this account
+      --show-estimate-gas    print estimate gas of tx
       --show-input-data      print input data of tx
       --show-raw-tx          print raw signed tx
       --terse                produce terse output
