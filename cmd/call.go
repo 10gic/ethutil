@@ -19,7 +19,7 @@ var callCmdTransferAmt string
 func init() {
 	callCmd.Flags().StringVarP(&callCmdABIFile, "abi-file", "", "", "the path of abi file, if this option specified, 'function signature' can be just function name")
 	callCmd.Flags().StringVarP(&callCmdTransferUnit, "unit", "u", "ether", "wei | gwei | ether, unit of amount")
-	callCmd.Flags().StringVarP(&callCmdTransferAmt, "amount", "n", "0", "the amount you want to transfer when call contract, unit is specified by --unit")
+	callCmd.Flags().StringVarP(&callCmdTransferAmt, "value", "", "0", "the amount you want to transfer when call contract, unit is ether and can be changed by --unit")
 }
 
 var callCmd = &cobra.Command{
@@ -70,11 +70,11 @@ var callCmd = &cobra.Command{
 		if globalOptPrivateKey == "" {
 			log.Fatalf("--private-key is required for call command")
 		} else {
-			var amount = decimal.RequireFromString(callCmdTransferAmt)
-			var amountInWei = unify2Wei(amount, callCmdTransferUnit)
+			var value = decimal.RequireFromString(callCmdTransferAmt)
+			var valueInWei = unify2Wei(value, callCmdTransferUnit)
 
 			var contract = common.HexToAddress(contractAddr)
-			tx, err := Transact(globalClient.RpcClient, globalClient.EthClient, buildPrivateKeyFromHex(globalOptPrivateKey), &contract, amountInWei.BigInt(), gasPrice, txInputData)
+			tx, err := Transact(globalClient.RpcClient, globalClient.EthClient, buildPrivateKeyFromHex(globalOptPrivateKey), &contract, valueInWei.BigInt(), gasPrice, txInputData)
 			checkErr(err)
 
 			log.Printf("transaction %s finished", tx)

@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"github.com/shopspring/decimal"
 	"io/ioutil"
 	"log"
-	"math/big"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -14,10 +14,14 @@ import (
 
 var deployABIFile string
 var deployBinFile string
+var deployValueUnit string
+var deployValue string
 
 func init() {
 	deployCmd.Flags().StringVarP(&deployABIFile, "abi-file", "", "", "the path of abi file, if this option specified, 'constructor signature' must not specified")
 	deployCmd.Flags().StringVarP(&deployBinFile, "bin-file", "", "", "the path of byte code file of contract")
+	deployCmd.Flags().StringVarP(&deployValueUnit, "unit", "u", "ether", "wei | gwei | ether, unit of amount")
+	deployCmd.Flags().StringVarP(&deployValue, "value", "", "0", "the amount you want to transfer when deploy contract, unit is ether and can be changed by --unit")
 
 	_ = deployCmd.MarkFlagRequired("bin-file")
 }
@@ -71,7 +75,10 @@ var deployCmd = &cobra.Command{
 			log.Fatalf("--private-key is required for deploy command")
 		}
 
-		tx, err := Transact(globalClient.RpcClient, globalClient.EthClient, buildPrivateKeyFromHex(globalOptPrivateKey), nil, big.NewInt(0), gasPrice, txData)
+		var value = decimal.RequireFromString(deployValue)
+		var valueInWei = unify2Wei(value, deployValueUnit)
+
+		tx, err := Transact(globalClient.RpcClient, globalClient.EthClient, buildPrivateKeyFromHex(globalOptPrivateKey), nil, valueInWei.BigInt(), gasPrice, txData)
 		checkErr(err)
 
 		log.Printf("transaction %s finished", tx)

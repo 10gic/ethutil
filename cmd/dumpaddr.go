@@ -65,27 +65,27 @@ func hdWallet(mnemonic string) (*ecdsa.PrivateKey, error) {
 		return nil, err
 	}
 	// This gives the path: m/44H
-	acc44H, err := masterKey.Child(hdkeychain.HardenedKeyStart + 44)
+	acc44H, err := masterKey.Derive(hdkeychain.HardenedKeyStart + 44)
 	if err != nil {
 		return nil, err
 	}
 	// This gives the path: m/44H/60H
-	acc44H60H, err := acc44H.Child(hdkeychain.HardenedKeyStart + 60)
+	acc44H60H, err := acc44H.Derive(hdkeychain.HardenedKeyStart + 60)
 	if err != nil {
 		return nil, err
 	}
 	// This gives the path: m/44H/60H/0H
-	acc44H60H0H, err := acc44H60H.Child(hdkeychain.HardenedKeyStart + 0)
+	acc44H60H0H, err := acc44H60H.Derive(hdkeychain.HardenedKeyStart + 0)
 	if err != nil {
 		return nil, err
 	}
 	// This gives the path: m/44H/60H/0H/0
-	acc44H60H0H0, err := acc44H60H0H.Child(0)
+	acc44H60H0H0, err := acc44H60H0H.Derive(0)
 	if err != nil {
 		return nil, err
 	}
 	// This gives the path: m/44H/60H/0H/0/0
-	acc44H60H0H00, err := acc44H60H0H0.Child(0)
+	acc44H60H0H00, err := acc44H60H0H0.Derive(0)
 	if err != nil {
 		return nil, err
 	}

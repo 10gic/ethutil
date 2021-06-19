@@ -87,7 +87,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVarP(&globalOptNodeUrl, "node-url", "", "", "the target connection node url, if this option specified, the --node option is ignored")
-	rootCmd.PersistentFlags().StringVarP(&globalOptNode, "node", "", "kovan", "mainnet | ropsten | kovan | rinkeby | sokol, the node type")
+	rootCmd.PersistentFlags().StringVarP(&globalOptNode, "node", "", "kovan", "mainnet | ropsten | kovan | rinkeby | goerli | sokol, the node type")
 	rootCmd.PersistentFlags().StringVarP(&globalOptGasPrice, "gas-price", "", "", "the gas price, unit is gwei.")
 	rootCmd.PersistentFlags().Uint64VarP(&globalOptGasLimit, "gas-limit", "", 0, "the gas limit")
 	rootCmd.PersistentFlags().Int64VarP(&globalOptNonce, "nonce", "", -1, "the nonce, -1 means check online")
