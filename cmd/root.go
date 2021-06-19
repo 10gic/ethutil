@@ -52,29 +52,29 @@ const nodeKovan = "kovan"
 const nodeRinkeby = "rinkeby"
 const nodeGoerli = "goerli"
 const nodeSokol = "sokol"
+const nodeBsc = "bsc"
 const nodeHeco = "heco"
-const nodeHecoTest = "hecotest"
 
 var nodeUrlMap = map[string]string{
-	nodeMainnet:  "wss://mainnet.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472", // please replace it
-	nodeRopsten:  "wss://ropsten.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472", // please replace it
-	nodeKovan:    "wss://kovan.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472",   // please replace it
-	nodeRinkeby:  "wss://rinkeby.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472", // please replace it
-	nodeGoerli:   "wss://goerli.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472",  // please replace it
-	nodeSokol:    "https://sokol.poa.network",
-	nodeHeco:     "wss://ws-mainnet-node.huobichain.com",
-	nodeHecoTest: "wss://ws-testnet.hecochain.com",
+	nodeMainnet: "wss://mainnet.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472", // please replace infura project id
+	nodeRopsten: "wss://ropsten.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472", // please replace infura project id
+	nodeKovan:   "wss://kovan.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472",   // please replace infura project id
+	nodeRinkeby: "wss://rinkeby.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472", // please replace infura project id
+	nodeGoerli:  "wss://goerli.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472",  // please replace infura project id
+	nodeSokol:   "https://sokol.poa.network",
+	nodeBsc:     "https://bsc-dataseed1.binance.org",
+	nodeHeco:    "wss://ws-mainnet-node.huobichain.com",
 }
 
 var nodeTxExplorerUrlMap = map[string]string{
-	nodeMainnet:  "https://etherscan.io/tx/",
-	nodeRopsten:  "https://ropsten.etherscan.io/tx/",
-	nodeKovan:    "https://kovan.etherscan.io/tx/",
-	nodeRinkeby:  "https://rinkeby.etherscan.io/tx/",
-	nodeGoerli:   "https://goerli.etherscan.io/tx/",
-	nodeSokol:    "https://blockscout.com/poa/sokol/tx/",
-	nodeHeco:     "https://scan.hecochain.com/tx/",
-	nodeHecoTest: "https://scan-testnet.hecochain.com/tx/",
+	nodeMainnet: "https://etherscan.io/tx/",
+	nodeRopsten: "https://ropsten.etherscan.io/tx/",
+	nodeKovan:   "https://kovan.etherscan.io/tx/",
+	nodeRinkeby: "https://rinkeby.etherscan.io/tx/",
+	nodeGoerli:  "https://goerli.etherscan.io/tx/",
+	nodeSokol:   "https://blockscout.com/poa/sokol/tx/",
+	nodeBsc:     "https://bscscan.com/tx/",
+	nodeHeco:    "https://scan.hecochain.com/tx/",
 }
 
 // Execute cobra root command
@@ -87,7 +87,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVarP(&globalOptNodeUrl, "node-url", "", "", "the target connection node url, if this option specified, the --node option is ignored")
-	rootCmd.PersistentFlags().StringVarP(&globalOptNode, "node", "", "kovan", "mainnet | ropsten | kovan | rinkeby | goerli | sokol, the node type")
+	rootCmd.PersistentFlags().StringVarP(&globalOptNode, "node", "", "kovan", "mainnet | ropsten | kovan | rinkeby | goerli | sokol | bsc | heco, the node type")
 	rootCmd.PersistentFlags().StringVarP(&globalOptGasPrice, "gas-price", "", "", "the gas price, unit is gwei.")
 	rootCmd.PersistentFlags().Uint64VarP(&globalOptGasLimit, "gas-limit", "", 0, "the gas limit")
 	rootCmd.PersistentFlags().Int64VarP(&globalOptNonce, "nonce", "", -1, "the nonce, -1 means check online")
@@ -126,7 +126,7 @@ func initConfig() {
 
 	// validation
 	if !contains([]string{nodeMainnet, nodeRopsten, nodeKovan, nodeRinkeby, nodeGoerli, nodeSokol,
-		nodeHeco, nodeHecoTest}, globalOptNode) {
+		nodeBsc, nodeHeco}, globalOptNode) {
 		log.Printf("invalid option for --node: %v", globalOptNode)
 		_ = rootCmd.Help()
 		os.Exit(1)

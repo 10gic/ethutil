@@ -34,7 +34,7 @@ Flags:
       --gas-limit uint       the gas limit
       --gas-price string     the gas price, unit is gwei.
   -h, --help                 help for ethutil
-      --node string          mainnet | ropsten | kovan | rinkeby | sokol, the node type (default "kovan")
+      --node string          mainnet | ropsten | kovan | rinkeby | goerli | sokol | bsc | heco, the node type (default "kovan")
       --node-url string      the target connection node url, if this option specified, the --node option is ignored
       --nonce int            the nonce, -1 means check online (default -1)
   -k, --private-key string   the private key, eth would be send from this account
