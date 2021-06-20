@@ -44,7 +44,7 @@ func checkErr(err error) {
 
 // isValidEthAddress returns true if v is a valid eth address.
 func isValidEthAddress(v string) bool {
-	var ethAddressRE = regexp.MustCompile("^0x[0-9a-fA-F]{40}$")
+	var ethAddressRE = regexp.MustCompile("^(0x)?[0-9a-fA-F]{40}$")
 	return ethAddressRE.MatchString(v)
 }
 
