@@ -111,6 +111,7 @@ func init() {
 	rootCmd.AddCommand(decodeTxCmd)
 	rootCmd.AddCommand(getCodeCmd)
 	rootCmd.AddCommand(erc20Cmd)
+	rootCmd.AddCommand(keccakCmd)
 }
 
 func initConfig() {

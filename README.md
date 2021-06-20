@@ -27,6 +27,7 @@ Available Commands:
   decode-tx             Decode raw transaction
   code                  Get runtime bytecode of a contract on the blockchain
   erc20                 Call ERC20 contract, a helper for subcommand call/query
+  keccak                Compute keccak hash
   help                  Help about any command
 
 Flags:
@@ -217,6 +218,12 @@ $ ethutil --node mainnet --private-key 0xXXXX erc20 0xdac17f958d2ee523a220620699
 Example of transfer ERC20:
 ```shell
 $ ethutil --node mainnet --private-key 0xXXXX erc20 0xdac17f958d2ee523a2206206994597c13d831ec7 transfer 0x8F36975cdeA2e6E64f85719788C8EFBBe89DFBbb 1000000
+```
+
+## Compute keccak hash
+```shell
+$ echo -n "abc" | ethutil keccak -
+4e03657aea45a94fc7d47ba826c8d667c0d1e6e33a64a036ec44f58fa12d6c45  -
 ```
 
 # Issue
