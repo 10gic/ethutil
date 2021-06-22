@@ -146,7 +146,7 @@ func getTxReceipt(client *ethclient.Client, txHash common.Hash, timeout time.Dur
 recheck:
 	if rp, err := client.TransactionReceipt(context.Background(), txHash); err != nil {
 		if err == ethereum.NotFound {
-			log.Printf("tx %v not found (may be pending) in ethereum", txHash.String())
+			log.Printf("tx %v not found (may be pending) in network", txHash.String())
 		} else {
 			return nil, fmt.Errorf("TransactionReceipt fail: %w", err)
 		}
@@ -161,8 +161,8 @@ recheck:
 	}
 
 	// not timeout
-	log.Printf("re-check tx %v after 10 seconds", txHash.String())
-	time.Sleep(time.Second * 10)
+	log.Printf("re-check tx %v after 5 seconds", txHash.String())
+	time.Sleep(time.Second * 5)
 	goto recheck
 }
 
@@ -330,14 +330,21 @@ func Transact(rpcClient *rpc.Client, client *ethclient.Client, privateKey *ecdsa
 	}
 
 	if !globalOptTerseOutput {
-		if globalOptNodeUrl == "" {
-			// only show tx link when use not customize nodeUrl
-			log.Printf(nodeTxExplorerUrlMap[globalOptNode] + rpcReturnTx.String())
+		// show tx explorer url only when globalOptNodeUrl in map nodeUrlMap
+		for k, v := range nodeUrlMap {
+			if v == globalOptNodeUrl {
+				log.Printf(nodeTxExplorerUrlMap[k] + rpcReturnTx.String())
+				break
+			}
 		}
 	}
 
 	if rp.Status != types.ReceiptStatusSuccessful {
 		return "", fmt.Errorf("tx %v minted, but status is failed, please check it in block explorer", rpcReturnTx.String())
+	}
+
+	if toAddress == nil {
+		log.Printf("the new contract deployed at %v", crypto.CreateAddress(fromAddress, nonce))
 	}
 
 	return rpcReturnTx.String(), nil

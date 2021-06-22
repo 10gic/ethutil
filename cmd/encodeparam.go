@@ -132,10 +132,20 @@ func extractFuncName(input string) string {
 // Example 2 (no function name):
 // input: "(uint256, address, bool)"
 // output: "", ["uint256", "address", "bool"], nil
+//
+// Example 3 (no parenthesis):
+// input: "test"
+// output: "test", [], nil
 func parseFuncSignature(input string) (string, []string, error) {
 	if strings.HasPrefix(input, "function ") {
 		input = input[len("function "):] // remove leading string "function "
 	}
+
+	if strings.Index(input, "(") < 0 && strings.Index(input, ")") < 0 {
+		// no parenthesis found
+		return strings.Trim(input, " "), []string{}, nil
+	}
+
 	input = strings.TrimLeft(input, " ")
 
 	leftParenthesisLoc := strings.Index(input, "(")
@@ -544,13 +554,34 @@ func buildArgumentAndData(inputArgTypes, inputArgData []string) (abi.Arguments, 
 			}
 			theArgData = append(theArgData, uint64(i))
 		} else if strings.Contains(inputType, "int") { // other cases: int24, int40, ..., int256, uint24, uint40, ..., uint256, etc
+			argData := inputArgData[index]
+
 			if !isValidInt(inputType) {
 				return nil, nil, fmt.Errorf("type %v not a valid type", inputType)
 			}
+
+			if (inputType == "uint256" || inputType == "uint") && regexp.MustCompile("^[0-9]+e[0-9]+$").MatchString(argData) {
+				// example:
+				// convert 1e18 to 1000000000000000000
+				// convert 2e18 to 2000000000000000000
+				r := regexp.MustCompile(`^([0-9]+)e([0-9]+)$`)
+				matches := r.FindStringSubmatch(argData)
+
+				part1 := matches[1] // group 1
+				part2 := matches[2] // group 2
+
+				part2Int, err := strconv.ParseInt(part2, 10, 64)
+				checkErr(err)
+
+				out := part1 + strings.Repeat("0", int(part2Int))
+				log.Printf("convert %v to %v", argData, out)
+				argData = out
+			}
+
 			n := new(big.Int)
-			n, ok := n.SetString(inputArgData[index], 10)
+			n, ok := n.SetString(argData, 10)
 			if !ok {
-				return nil, nil, fmt.Errorf("arg (position %v) invalid, %s cannot covert to type %v", index, inputArgData[index], inputType)
+				return nil, nil, fmt.Errorf("arg (position %v) invalid, %s cannot covert to type %v", index, argData, inputType)
 			}
 			theArgData = append(theArgData, n)
 
