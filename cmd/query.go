@@ -36,12 +36,15 @@ var queryCmd = &cobra.Command{
 		funcSignature := args[1]
 		inputArgData := args[2:]
 
-		isContract, err := isContractAddress(globalClient.EthClient, common.HexToAddress(contractAddr))
-		if err != nil {
-			panic(err)
-		}
-		if !isContract {
-			log.Fatalf("%v is NOT a contract address, can not find it from blockchain", contractAddr)
+		if !globalOptDryRun {
+			// don't check contract address if --dry-run specified
+			isContract, err := isContractAddress(globalClient.EthClient, common.HexToAddress(contractAddr))
+			if err != nil {
+				panic(err)
+			}
+			if !isContract {
+				log.Fatalf("%v is NOT a contract address, can not find it from blockchain", contractAddr)
+			}
 		}
 
 		if queryCmdABIFile != "" {
