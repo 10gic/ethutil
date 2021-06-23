@@ -560,22 +560,11 @@ func buildArgumentAndData(inputArgTypes, inputArgData []string) (abi.Arguments, 
 				return nil, nil, fmt.Errorf("type %v not a valid type", inputType)
 			}
 
-			if (inputType == "uint256" || inputType == "uint") && regexp.MustCompile("^[0-9]+e[0-9]+$").MatchString(argData) {
+			if (inputType == "uint256" || inputType == "uint") && strings.Contains(argData, "e") {
 				// example:
 				// convert 1e18 to 1000000000000000000
-				// convert 2e18 to 2000000000000000000
-				r := regexp.MustCompile(`^([0-9]+)e([0-9]+)$`)
-				matches := r.FindStringSubmatch(argData)
-
-				part1 := matches[1] // group 1
-				part2 := matches[2] // group 2
-
-				part2Int, err := strconv.ParseInt(part2, 10, 64)
+				argData, err = scientificNotation2Decimal(argData)
 				checkErr(err)
-
-				out := part1 + strings.Repeat("0", int(part2Int))
-				log.Printf("convert %v to %v", argData, out)
-				argData = out
 			}
 
 			n := new(big.Int)
@@ -990,4 +979,34 @@ func isValidInt(intType string) bool {
 		return true
 	}
 	return false
+}
+
+func scientificNotation2Decimal(input string) (string, error) {
+	r := regexp.MustCompile(`^([0-9]*)([.]?)([0-9]+)e([0-9]+)$`)
+	matches := r.FindStringSubmatch(input)
+
+	part1 := matches[1] // group 1
+	part2 := matches[2] // group 2
+	part3 := matches[3] // group 3
+	part4 := matches[4] // group 4
+
+	part4Int, err := strconv.ParseInt(part4, 10, 64)
+	checkErr(err)
+
+	var result = ""
+	if part2 == "." {
+		// has dot, for example 12.1e3
+		if part1 == "0" {
+			// for example 0.3e5
+			result = part3 + strings.Repeat("0", int(part4Int)-1)
+		} else {
+			result = part1 + part3 + strings.Repeat("0", int(part4Int)-1)
+		}
+	} else {
+		// no dot
+		result = part3 + strings.Repeat("0", int(part4Int))
+	}
+
+	log.Printf("convert %v to %v", input, result)
+	return result, nil
 }

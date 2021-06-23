@@ -60,3 +60,47 @@ func TestEncodeParameters(t *testing.T) {
 		}
 	}
 }
+
+func TestScientificNotation2Decimal(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{
+			input: "1e18",
+			want:  "1000000000000000000",
+		},
+		{
+			input: "1.0e18",
+			want:  "1000000000000000000",
+		},
+		{
+			input: "2e18",
+			want:  "2000000000000000000",
+		},
+		{
+			input: "2.0e18",
+			want:  "2000000000000000000",
+		},
+		{
+			input: "1.1e5",
+			want:  "110000",
+		},
+		{
+			input: "0.1e5",
+			want:  "10000",
+		},
+		{
+			input: ".1e5",
+			want:  "10000",
+		},
+	}
+
+	for i, tc := range tests {
+		got, _ := scientificNotation2Decimal(tc.input)
+		if !reflect.DeepEqual(tc.want, got) {
+			// fmt.Printf("%v", hex.EncodeToString(got))
+			t.Fatalf("test %d: expected: %v, got: %v", i+1, tc.want, got)
+		}
+	}
+}
