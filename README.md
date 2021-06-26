@@ -179,15 +179,15 @@ contract address 0x4D1A2e2bB4F88F0250f26Ffff098B0b30B26BF38
 
 ## Decode Raw Transaction
 ```shell
-$ ethutil decode-raw-tx --hex-data 0xf86c808504e3b2920082520894428cf082d321d435ff0e1f8a994e01f976f19c118809b5552f5abade008026a00a27decf27241dca4e5d82bd5b7c1fbcc3f09c35a2a05cb967f2983d148ad6aba0596e9baa40ab157f5b1b0d66746472550ba9000d4154e3faa43ccce00b030452
-basic info (see eip155):
+$ ethutil decode-tx 0xf86c808504e3b2920082520894428cf082d321d435ff0e1f8a994e01f976f19c118809b5552f5abade008026a00a27decf27241dca4e5d82bd5b7c1fbcc3f09c35a2a05cb967f2983d148ad6aba0596e9baa40ab157f5b1b0d66746472550ba9000d4154e3faa43ccce00b030452
+basic info (eip155):
 nonce = 0
-gas price = 21000000000, i.e. 21 Gwei
-gas limit = 21000
+gasPrice = 21000000000, i.e. 21 Gwei
+gasLimit = 21000
 to = 0x428Cf082D321d435fF0e1F8a994e01f976F19c11
 value = 699558979000000000, i.e. 0.699558979 Ether
-input data (hex) = 
-chain id = 1
+data (hex) = 
+chainId = 1
 v = 38
 r (hex) = a27decf27241dca4e5d82bd5b7c1fbcc3f09c35a2a05cb967f2983d148ad6ab
 s (hex) = 596e9baa40ab157f5b1b0d66746472550ba9000d4154e3faa43ccce00b030452
@@ -197,7 +197,7 @@ txid (hex) = a8208564aa36d095973ce979df5bda03568ae0fb55f76517f1d91438bba84390
 hash before ecdsa sign (hex) = 75fee2d3e846aacfcd167febf6af8d17b6fb73188a06bcf7cb5b626a347bad54
 ecdsa recovery id = 1
 uncompressed 65 bytes public key of sender (hex) = 04a68b04c516ef2bec4e598c825cac73350012b2fe6f798270be34f800bab44024dc3580906d2f709013745a79f37cc4e3fd651289a46f5bdafd6e9da63389aec8
-address of sender = 0xf7033D6010E8F2E12b810883e1c28CAcd6D25B16
+sender = 0xf7033D6010E8F2E12b810883e1c28CAcd6D25B16
 ```
 
 ## Get Contract Runtime Bytecode
