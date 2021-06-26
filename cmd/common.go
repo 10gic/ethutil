@@ -265,21 +265,54 @@ func Transact(rpcClient *rpc.Client, client *ethclient.Client, privateKey *ecdsa
 	}
 
 	var tx *types.Transaction
-	tx = types.NewTx(&types.LegacyTx{
-		Nonce:    nonce,
-		To:       toAddress, // nil means contract creation
-		Value:    amount,
-		Gas:      gasLimit,
-		GasPrice: gasPrice,
-		Data:     data,
-	})
+
+	if globalOptTxType == txTypeEip1559 {
+		// FIXME: Use rpc eth_feeHistory to estimate default maxPriorityFeePerGas and maxFeePerGas
+
+		var maxPriorityFeePerGas *big.Int
+		if globalOptMaxPriorityFeePerGas == "" {
+			return "", fmt.Errorf("must specify --max-priority-fee-per-gas for eip1559 tx")
+		} else {
+			maxPriorityFeePerGasDecimal, _ := decimal.NewFromString(globalOptMaxPriorityFeePerGas)
+			// convert from gwei to wei
+			maxPriorityFeePerGas = maxPriorityFeePerGasDecimal.Mul(decimal.RequireFromString("1000000000")).BigInt()
+		}
+
+		var maxFeePerGas *big.Int
+		if globalOptMaxFeePerGas == "" {
+			return "", fmt.Errorf("must specify --max-fee-per-gas for eip1559 tx")
+		} else {
+			maxFeePerGasDecimal, _ := decimal.NewFromString(globalOptMaxFeePerGas)
+			// convert from gwei to wei
+			maxFeePerGas = maxFeePerGasDecimal.Mul(decimal.RequireFromString("1000000000")).BigInt()
+		}
+
+		tx = types.NewTx(&types.DynamicFeeTx{
+			Nonce:     nonce,
+			To:        toAddress, // nil means contract creation
+			Value:     amount,
+			Gas:       gasLimit,
+			GasTipCap: maxPriorityFeePerGas,
+			GasFeeCap: maxFeePerGas,
+			Data:      data,
+		})
+	} else {
+		tx = types.NewTx(&types.LegacyTx{
+			Nonce:    nonce,
+			To:       toAddress, // nil means contract creation
+			Value:    amount,
+			Gas:      gasLimit,
+			GasPrice: gasPrice,
+			Data:     data,
+		})
+	}
 
 	chainID, err := client.NetworkID(context.Background())
 	if err != nil {
 		return "", fmt.Errorf("NetworkID fail: %w", err)
 	}
 
-	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
+	signedTx, err := types.SignTx(tx, types.NewLondonSigner(chainID), privateKey)
 	if err != nil {
 		return "", fmt.Errorf("SignTx fail: %w", err)
 	}
@@ -360,11 +393,13 @@ func Call(client *ethclient.Client, toAddress common.Address, data []byte) ([]by
 
 // getRecoveryId gets ecdsa recover id (0 or 1) from v.
 func getRecoveryId(v *big.Int) int {
-	var recoveryId int
 	// Note: can be simplified by checking parity (i.e. odd-even)
-	if v.Int64() == 27 || v.Int64() == 28 { // v before eip155
+	var recoveryId int
+	if v.Int64() == 0 || v.Int64() == 1 { // v in eip2718
+		recoveryId = int(v.Int64())
+	} else if v.Int64() == 27 || v.Int64() == 28 { // v before eip155
 		recoveryId = int(v.Int64()) - 27
-	} else { // v after eip155
+	} else { // v in eip155
 		// derive chainId
 		var chainId = int((v.Int64() - 35) / 2)
 		// derive recoveryId
