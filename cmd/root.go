@@ -27,7 +27,7 @@ var (
 	globalOptTxType               string
 	rootCmd                       = &cobra.Command{
 		Use:   "ethutil",
-		Short: "An Ethereum util, can transfer eth, check balance, drop pending tx, etc",
+		Short: "An Ethereum util, can transfer eth, check balance, call any contract function etc",
 	}
 
 	globalClient *Client
@@ -112,6 +112,7 @@ func init() {
 	rootCmd.AddCommand(callCmd)
 	rootCmd.AddCommand(queryCmd)
 	rootCmd.AddCommand(deployCmd)
+	rootCmd.AddCommand(deployErc20Cmd)
 	rootCmd.AddCommand(dropTxCmd)
 	rootCmd.AddCommand(encodeParamCmd)
 	rootCmd.AddCommand(genkeyCmd)
@@ -136,6 +137,9 @@ func initConfig() {
 
 	if globalOptNodeUrl == "" {
 		globalOptNodeUrl = nodeUrlMap[globalOptNode]
+
+		// Print current network if --node-url is not specified
+		log.Printf("Current network is %v", globalOptNode)
 	}
 
 	if globalOptGasPrice != "" {
