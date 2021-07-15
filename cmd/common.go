@@ -104,6 +104,7 @@ func buildPrivateKeyFromHex(privateKeyHex string) *ecdsa.PrivateKey {
 
 // wei2Other converts wei to other unit (specified by targetUnit).
 func wei2Other(sourceAmtInWei decimal.Decimal, targetUnit string) decimal.Decimal {
+	decimal.DivisionPrecision = 18
 	if targetUnit == unitWei {
 		return sourceAmtInWei
 	} else if targetUnit == unitGwei {
