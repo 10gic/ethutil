@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"encoding/hex"
 	"github.com/spf13/cobra"
 	"log"
@@ -56,14 +55,11 @@ var deployErc20Cmd = &cobra.Command{
 		checkErr(err)
 		// log.Printf("txData=%s", hex.Dump(txData))
 
-		gasPrice, err := globalClient.EthClient.SuggestGasPrice(context.Background())
-		checkErr(err)
-
 		if globalOptPrivateKey == "" {
 			log.Fatalf("--private-key is required for deploy command")
 		}
 
-		tx, err := Transact(globalClient.RpcClient, globalClient.EthClient, buildPrivateKeyFromHex(globalOptPrivateKey), nil, big.NewInt(0), gasPrice, txData)
+		tx, err := Transact(globalClient.RpcClient, globalClient.EthClient, buildPrivateKeyFromHex(globalOptPrivateKey), nil, big.NewInt(0), nil, txData)
 		checkErr(err)
 
 		log.Printf("transaction %s finished", tx)

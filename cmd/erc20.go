@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"log"
 	"math/big"
 
@@ -72,14 +71,11 @@ var erc20Cmd = &cobra.Command{
 		}
 
 		if changeContractState(funcName) {
-			gasPrice, err := globalClient.EthClient.SuggestGasPrice(context.Background())
-			checkErr(err)
-
 			if globalOptPrivateKey == "" {
 				log.Fatalf("--private-key is required for this command")
 			} else {
 				var contract = common.HexToAddress(contractAddr)
-				tx, err := Transact(globalClient.RpcClient, globalClient.EthClient, buildPrivateKeyFromHex(globalOptPrivateKey), &contract, big.NewInt(0), gasPrice, txInputData)
+				tx, err := Transact(globalClient.RpcClient, globalClient.EthClient, buildPrivateKeyFromHex(globalOptPrivateKey), &contract, big.NewInt(0), nil, txInputData)
 				checkErr(err)
 
 				log.Printf("transaction %s finished", tx)

@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"io/ioutil"
 	"log"
 	"os"
@@ -67,9 +66,6 @@ var callCmd = &cobra.Command{
 			log.Printf("input data = %v", hexutil.Encode(txInputData))
 		}
 
-		gasPrice, err := globalClient.EthClient.SuggestGasPrice(context.Background())
-		checkErr(err)
-
 		if globalOptPrivateKey == "" {
 			log.Fatalf("--private-key is required for call command")
 		} else {
@@ -77,7 +73,7 @@ var callCmd = &cobra.Command{
 			var valueInWei = unify2Wei(value, callCmdTransferUnit)
 
 			var contract = common.HexToAddress(contractAddr)
-			tx, err := Transact(globalClient.RpcClient, globalClient.EthClient, buildPrivateKeyFromHex(globalOptPrivateKey), &contract, valueInWei.BigInt(), gasPrice, txInputData)
+			tx, err := Transact(globalClient.RpcClient, globalClient.EthClient, buildPrivateKeyFromHex(globalOptPrivateKey), &contract, valueInWei.BigInt(), nil, txInputData)
 			checkErr(err)
 
 			log.Printf("transaction %s finished", tx)

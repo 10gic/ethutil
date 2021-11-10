@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"bytes"
-	"context"
 	"encoding/hex"
 	"fmt"
 	"github.com/shopspring/decimal"
@@ -59,6 +58,7 @@ var deployCmd = &cobra.Command{
 			log.Printf("solcjs output to dir %v", dir)
 
 			cmd := exec.Command("solcjs", "--base-path", ".", "--bin", "--abi", "--output-dir", dir, deploySrcFile)
+			log.Printf("executing command %v", cmd.String())
 			var out bytes.Buffer
 			var stderr bytes.Buffer
 			cmd.Stdout = &out
@@ -127,9 +127,6 @@ var deployCmd = &cobra.Command{
 		checkErr(err)
 		// log.Printf("txData=%s", hex.Dump(txData))
 
-		gasPrice, err := globalClient.EthClient.SuggestGasPrice(context.Background())
-		checkErr(err)
-
 		if globalOptPrivateKey == "" {
 			log.Fatalf("--private-key is required for deploy command")
 		}
@@ -137,7 +134,7 @@ var deployCmd = &cobra.Command{
 		var value = decimal.RequireFromString(deployValue)
 		var valueInWei = unify2Wei(value, deployValueUnit)
 
-		tx, err := Transact(globalClient.RpcClient, globalClient.EthClient, buildPrivateKeyFromHex(globalOptPrivateKey), nil, valueInWei.BigInt(), gasPrice, txData)
+		tx, err := Transact(globalClient.RpcClient, globalClient.EthClient, buildPrivateKeyFromHex(globalOptPrivateKey), nil, valueInWei.BigInt(), nil, txData)
 		checkErr(err)
 
 		log.Printf("transaction %s finished", tx)

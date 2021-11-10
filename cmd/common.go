@@ -265,6 +265,12 @@ func Transact(rpcClient *rpc.Client, client *ethclient.Client, privateKey *ecdsa
 		}
 	}
 
+	// if not specified
+	if gasPrice == nil {
+		gasPrice, err = getGasPrice(globalClient.EthClient)
+		checkErr(err)
+	}
+
 	var tx *types.Transaction
 
 	if globalOptTxType == txTypeEip1559 {
@@ -318,6 +324,11 @@ func Transact(rpcClient *rpc.Client, client *ethclient.Client, privateKey *ecdsa
 		return "", fmt.Errorf("SignTx fail: %w", err)
 	}
 
+	if globalOptShowRawTx {
+		rawTx, _ := GenRawTx(signedTx)
+		log.Printf("raw tx = %v", rawTx)
+	}
+
 	if globalOptShowEstimateGas {
 		// EstimateGas
 		msg := ethereum.CallMsg{
@@ -333,11 +344,6 @@ func Transact(rpcClient *rpc.Client, client *ethclient.Client, privateKey *ecdsa
 			return "", fmt.Errorf("EstimateGas fail: %w", err)
 		}
 		log.Printf("estimate gas = %v", gas)
-	}
-
-	if globalOptShowRawTx {
-		rawTx, _ := GenRawTx(signedTx)
-		log.Printf("raw tx = %v", rawTx)
 	}
 
 	if globalOptDryRun {
