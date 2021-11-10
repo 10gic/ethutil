@@ -59,7 +59,11 @@ func decodeEip155(rawTxHexData string) {
 	fmt.Printf("nonce = %d\n", tx.Nonce())
 	fmt.Printf("gasPrice = %s, i.e. %s Gwei\n", tx.GasPrice().String(), wei2Other(bigInt2Decimal(tx.GasPrice()), unitGwei).String())
 	fmt.Printf("gasLimit = %d\n", tx.Gas())
-	fmt.Printf("to = %s\n", tx.To().String())
+	if tx.To() == nil {
+		fmt.Printf("to = nil (nil means contract creation)\n")
+	} else {
+		fmt.Printf("to = %s\n", tx.To().String())
+	}
 	fmt.Printf("value = %s, i.e. %s Ether\n", tx.Value().String(), wei2Other(bigInt2Decimal(tx.Value()), unitEther).String())
 	fmt.Printf("data (hex) = %x\n", tx.Data())
 
@@ -124,7 +128,11 @@ func decodeEip2930(transactionType int, transactionPayload string) {
 	fmt.Printf("nonce = %d\n", accessListTx.Nonce)
 	fmt.Printf("gasPrice = %s, i.e. %s Gwei\n", accessListTx.GasPrice.String(), wei2Other(bigInt2Decimal(accessListTx.GasPrice), unitGwei).String())
 	fmt.Printf("gasLimit = %d\n", accessListTx.Gas)
-	fmt.Printf("to = %s\n", accessListTx.To.String())
+	if accessListTx.To == nil {
+		fmt.Printf("to = nil (nil means contract creation)\n")
+	} else {
+		fmt.Printf("to = %s\n", accessListTx.To.String())
+	}
 	fmt.Printf("value = %s, i.e. %s Ether\n", accessListTx.Value.String(), wei2Other(bigInt2Decimal(accessListTx.Value), unitEther).String())
 	fmt.Printf("data (hex) = %x\n", accessListTx.Data)
 	fmt.Printf("accessList = %v\n", accessListTx.AccessList)
@@ -179,7 +187,11 @@ func decodeEip1559(transactionType int, transactionPayload string) {
 	fmt.Printf("maxPriorityFeePerGas = %s, i.e. %s Gwei\n", dynamicFeeTx.GasTipCap.String(), wei2Other(bigInt2Decimal(dynamicFeeTx.GasTipCap), unitGwei).String())
 	fmt.Printf("maxFeePerGas = %s, i.e. %s Gwei\n", dynamicFeeTx.GasFeeCap.String(), wei2Other(bigInt2Decimal(dynamicFeeTx.GasFeeCap), unitGwei).String())
 	fmt.Printf("gasLimit = %d\n", dynamicFeeTx.Gas)
-	fmt.Printf("to = %s\n", dynamicFeeTx.To.String())
+	if dynamicFeeTx.To == nil {
+		fmt.Printf("to = nil (nil means contract creation)\n")
+	} else {
+		fmt.Printf("to = %s\n", dynamicFeeTx.To.String())
+	}
 	fmt.Printf("value = %s, i.e. %s Ether\n", dynamicFeeTx.Value.String(), wei2Other(bigInt2Decimal(dynamicFeeTx.Value), unitEther).String())
 	fmt.Printf("data (hex) = %x\n", dynamicFeeTx.Data)
 	fmt.Printf("accessList = %v\n", dynamicFeeTx.AccessList)
