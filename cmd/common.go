@@ -38,7 +38,8 @@ func contains(arr []string, str string) bool {
 // checkErr panic if err != nil.
 func checkErr(err error) {
 	if err != nil {
-		panic(err)
+		log.Fatalf("%v", err)
+		// panic(err)
 	}
 }
 

@@ -55,7 +55,7 @@ var deployCmd = &cobra.Command{
 			}
 			defer os.RemoveAll(dir)
 
-			log.Printf("solcjs output to dir %v", dir)
+			//log.Printf("solcjs output to dir %v", dir)
 
 			cmd := exec.Command("solcjs", "--base-path", ".", "--bin", "--abi", "--output-dir", dir, deploySrcFile)
 			log.Printf("executing command %v", cmd.String())
