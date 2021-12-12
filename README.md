@@ -6,53 +6,7 @@ An Ethereum util, can transfer eth, check balance, call any contract function et
 GO111MODULE=on go install github.com/10gic/ethutil@latest
 ```
 
-# Usage
-```txt
-An Ethereum util, can transfer eth, check balance, call any contract function etc
-
-Usage:
-  ethutil [command]
-
-Available Commands:
-  balance               Check eth balance for address
-  transfer              Transfer amount of eth to target-address
-  call                  Invokes the (paid) contract method
-  query                 Invokes the (constant) contract method
-  deploy                Deploy contract
-  deploy-erc20          Deploy an ERC20 token
-  drop-tx               Drop pending tx for address
-  encode-param          Encode input arguments, it's useful when you call contract's method manually
-  gen-private-key       Generate eth private key and its address
-  dump-address          Dump address from private key or mnemonic
-  compute-contract-addr Compute contract address before deployment
-  decode-tx             Decode raw transaction
-  code                  Get runtime bytecode of a contract on the blockchain
-  erc20                 Call ERC20 contract, a helper for subcommand call/query
-  keccak                Compute keccak hash
-  help                  Help about any command
-
-
-Flags:
-      --dry-run                           do not broadcast tx
-      --gas-limit uint                    the gas limit
-      --gas-price string                  the gas price, unit is gwei.
-  -h, --help                              help for ethutil
-      --max-fee-per-gas string            maximum fee per gas they are willing to pay total, unit is gwei. see eip1559
-      --max-priority-fee-per-gas string   maximum fee per gas they are willing to give to miners, unit is gwei. see eip1559
-      --node string                       mainnet | ropsten | kovan | rinkeby | goerli | sokol | bsc | heco, the node type (default "kovan")
-      --node-url string                   the target connection node url, if this option specified, the --node option is ignored
-      --nonce int                         the nonce, -1 means check online (default -1)
-  -k, --private-key string                the private key, eth would be send from this account
-      --show-estimate-gas                 print estimate gas of tx
-      --show-input-data                   print input data of tx
-      --show-raw-tx                       print raw signed tx
-      --terse                             produce terse output
-      --tx-type string                    eip155 | eip1559, the type of tx your want to send (default "eip155")
-
-Use "ethutil [command] --help" for more information about a command.
-```
-
-# Example
+# Usage Example
 ## Check Balance
 Check balance of an address:
 ```shell
@@ -228,6 +182,59 @@ $ ethutil --node mainnet --private-key 0xXXXX erc20 0xdac17f958d2ee523a220620699
 ```shell
 $ echo -n "abc" | ethutil keccak -
 4e03657aea45a94fc7d47ba826c8d667c0d1e6e33a64a036ec44f58fa12d6c45  -
+```
+
+## Download source of verified contract
+```shell
+$ ethutil --node mainnet download-src 0xdac17f958d2ee523a2206206994597c13d831ec7 -d output
+2021/12/12 21:25:44 Current network is mainnet
+2021/12/12 21:25:45 saving output/TetherToken.sol
+```
+
+# Documentation
+```txt
+An Ethereum util, can transfer eth, check balance, call any contract function etc
+
+Usage:
+  ethutil [command]
+
+Available Commands:
+  balance               Check eth balance for address
+  transfer              Transfer amount of eth to target-address
+  call                  Invokes the (paid) contract method
+  query                 Invokes the (constant) contract method
+  deploy                Deploy contract
+  deploy-erc20          Deploy an ERC20 token
+  drop-tx               Drop pending tx for address
+  encode-param          Encode input arguments, it's useful when you call contract's method manually
+  gen-private-key       Generate eth private key and its address
+  dump-address          Dump address from private key or mnemonic
+  compute-contract-addr Compute contract address before deployment
+  decode-tx             Decode raw transaction
+  code                  Get runtime bytecode of a contract on the blockchain
+  erc20                 Call ERC20 contract, a helper for subcommand call/query
+  keccak                Compute keccak hash
+  download-src          Download source code of contract from block explorer platform, eg. etherscan.
+  help                  Help about any command
+
+Flags:
+      --dry-run                           do not broadcast tx
+      --gas-limit uint                    the gas limit
+      --gas-price string                  the gas price, unit is gwei.
+  -h, --help                              help for ethutil
+      --max-fee-per-gas string            maximum fee per gas they are willing to pay total, unit is gwei. see eip1559
+      --max-priority-fee-per-gas string   maximum fee per gas they are willing to give to miners, unit is gwei. see eip1559
+      --node string                       mainnet | ropsten | kovan | rinkeby | goerli | sokol | bsc | heco, the node type (default "kovan")
+      --node-url string                   the target connection node url, if this option specified, the --node option is ignored
+      --nonce int                         the nonce, -1 means check online (default -1)
+  -k, --private-key string                the private key, eth would be send from this account
+      --show-estimate-gas                 print estimate gas of tx
+      --show-input-data                   print input data of tx
+      --show-raw-tx                       print raw signed tx
+      --terse                             produce terse output
+      --tx-type string                    eip155 | eip1559, the type of tx your want to send (default "eip155")
+
+Use "ethutil [command] --help" for more information about a command.
 ```
 
 # Issue

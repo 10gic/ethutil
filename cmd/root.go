@@ -83,6 +83,17 @@ var nodeTxExplorerUrlMap = map[string]string{
 	nodeHeco:    "https://scan.hecochain.com/tx/",
 }
 
+var nodeApiUrlMap = map[string]string {
+	nodeMainnet: "https://api.etherscan.io/api?module=contract&action=getsourcecode&address=%s",
+	nodeRopsten: "https://api-ropsten.etherscan.io/api?module=contract&action=getsourcecode&address=%s",
+	nodeKovan: "https://api-kovan.etherscan.io/api?module=contract&action=getsourcecode&address=%s",
+	nodeRinkeby: "https://api-rinkeby.etherscan.io/api?module=contract&action=getsourcecode&address=%s",
+	nodeGoerli: "https://api-goerli.etherscan.io/api?module=contract&action=getsourcecode&address=%s",
+	nodeSokol: "https://blockscout.com/poa/sokol/api?module=contract&action=getsourcecode&address=%s",
+	nodeBsc: "https://api.bscscan.com/api?module=contract&action=getsourcecode&address=%s",
+	nodeHeco: "https://api.hecoinfo.com/api?module=contract&action=getsourcecode&address=%s",
+}
+
 // Execute cobra root command
 func Execute() error {
 	return rootCmd.Execute()
@@ -122,6 +133,7 @@ func init() {
 	rootCmd.AddCommand(getCodeCmd)
 	rootCmd.AddCommand(erc20Cmd)
 	rootCmd.AddCommand(keccakCmd)
+	rootCmd.AddCommand(downloadSrcCmd)
 }
 
 func initConfig() {
