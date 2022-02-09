@@ -199,8 +199,8 @@ func getGasPriceFromEthGasStation() (*big.Int, error) {
 		return nil, err
 	}
 
-	// we use Average
-	gasPrice := big.NewInt(int64(gasStationPrice.Average * 100000000))
+	// we use `fast`
+	gasPrice := big.NewInt(int64(gasStationPrice.Fast * 100000000))
 	return gasPrice, nil
 }
 
