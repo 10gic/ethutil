@@ -4,11 +4,10 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/spf13/cobra"
+	"github.com/tyler-smith/go-bip32"
 	"github.com/tyler-smith/go-bip39"
 )
 
@@ -37,12 +36,12 @@ var dumpAddrCmd = &cobra.Command{
 		for _, dumpAddrPrivateKeyOrMnemonic := range privateKeyOrMnemonics {
 
 			var privateKey *ecdsa.PrivateKey
-			var err error
 			if isValidHexString(dumpAddrPrivateKeyOrMnemonic) {
 				privateKey = buildPrivateKeyFromHex(dumpAddrPrivateKeyOrMnemonic)
 			} else { // mnemonic
-				privateKey, err = hdWallet(dumpAddrPrivateKeyOrMnemonic)
+				privateKeyBytes, err := mnemonicToPrivateKey(dumpAddrPrivateKeyOrMnemonic)
 				checkErr(err)
+				privateKey = buildPrivateKeyFromHex(hexutil.Encode(privateKeyBytes))
 			}
 
 			privateHexStr := hexutil.Encode(crypto.FromECDSA(privateKey))
@@ -56,43 +55,39 @@ var dumpAddrCmd = &cobra.Command{
 	},
 }
 
-func hdWallet(mnemonic string) (*ecdsa.PrivateKey, error) {
+func mnemonicToPrivateKey(mnemonic string) ([]byte, error) {
 	// Generate a Bip32 HD wallet for the mnemonic and a user supplied password
 	seed := bip39.NewSeed(mnemonic, "")
 	// Generate a new master node using the seed.
-	masterKey, err := hdkeychain.NewMaster(seed, &chaincfg.MainNetParams)
+	masterKey, err := bip32.NewMasterKey(seed)
 	if err != nil {
 		return nil, err
 	}
 	// This gives the path: m/44H
-	acc44H, err := masterKey.Derive(hdkeychain.HardenedKeyStart + 44)
+	acc44H, err := masterKey.NewChildKey(bip32.FirstHardenedChild + 44)
 	if err != nil {
 		return nil, err
 	}
 	// This gives the path: m/44H/60H
-	acc44H60H, err := acc44H.Derive(hdkeychain.HardenedKeyStart + 60)
+	acc44H60H, err := acc44H.NewChildKey(bip32.FirstHardenedChild + 60)
 	if err != nil {
 		return nil, err
 	}
 	// This gives the path: m/44H/60H/0H
-	acc44H60H0H, err := acc44H60H.Derive(hdkeychain.HardenedKeyStart + 0)
+	acc44H60H0H, err := acc44H60H.NewChildKey(bip32.FirstHardenedChild + 0)
 	if err != nil {
 		return nil, err
 	}
 	// This gives the path: m/44H/60H/0H/0
-	acc44H60H0H0, err := acc44H60H0H.Derive(0)
+	acc44H60H0H0, err := acc44H60H0H.NewChildKey(0)
 	if err != nil {
 		return nil, err
 	}
 	// This gives the path: m/44H/60H/0H/0/0
-	acc44H60H0H00, err := acc44H60H0H0.Derive(0)
+	acc44H60H0H00, err := acc44H60H0H0.NewChildKey(0)
 	if err != nil {
 		return nil, err
 	}
-	btcecPrivKey, err := acc44H60H0H00.ECPrivKey()
-	if err != nil {
-		return nil, err
-	}
-	privateKey := btcecPrivKey.ToECDSA()
+	privateKey := acc44H60H0H00.Key // 32 bytes private key
 	return privateKey, nil
 }
