@@ -2,14 +2,23 @@ package cmd
 
 import (
 	"crypto/ecdsa"
+	"errors"
 	"fmt"
-
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/spf13/cobra"
 	"github.com/tyler-smith/go-bip32"
 	"github.com/tyler-smith/go-bip39"
+	"math"
+	"math/big"
+	"strings"
 )
+
+var dumpAddrCmdDerivationPath string
+
+func init() {
+	dumpAddrCmd.Flags().StringVarP(&dumpAddrCmdDerivationPath, "derivation-path", "", "m/44'/60'/0'/0/0", "the HD derivation path")
+}
 
 var dumpAddrCmd = &cobra.Command{
 	Use:     "dump-address private-key-or-mnemonics private-key-or-mnemonics ...",
@@ -39,7 +48,7 @@ var dumpAddrCmd = &cobra.Command{
 			if isValidHexString(dumpAddrPrivateKeyOrMnemonic) {
 				privateKey = buildPrivateKeyFromHex(dumpAddrPrivateKeyOrMnemonic)
 			} else { // mnemonic
-				privateKeyBytes, err := mnemonicToPrivateKey(dumpAddrPrivateKeyOrMnemonic)
+				privateKeyBytes, err := mnemonicToPrivateKey(dumpAddrPrivateKeyOrMnemonic, dumpAddrCmdDerivationPath)
 				checkErr(err)
 				privateKey = buildPrivateKeyFromHex(hexutil.Encode(privateKeyBytes))
 			}
@@ -55,7 +64,56 @@ var dumpAddrCmd = &cobra.Command{
 	},
 }
 
-func mnemonicToPrivateKey(mnemonic string) ([]byte, error) {
+func parseDerivationPath(derivationPath string) ([]uint32, error) {
+	components := strings.Split(derivationPath, "/")
+	if len(components) == 0 {
+		return nil, errors.New("empty derivation path")
+	}
+
+	if strings.TrimSpace(components[0]) != "m" {
+		return nil, errors.New("use 'm/' prefix for path")
+	}
+
+	components = components[1:]
+
+	// All remaining components are relative, append one by one
+	if len(components) == 0 {
+		return nil, errors.New("empty derivation path") // Empty relative paths
+	}
+
+	var result []uint32
+	for _, component := range components {
+		// Ignore any user added whitespace
+		component = strings.TrimSpace(component)
+		var value uint32
+
+		// Handle hardened paths
+		if strings.HasSuffix(component, "'") {
+			value = bip32.FirstHardenedChild
+			component = strings.TrimSpace(strings.TrimSuffix(component, "'"))
+		}
+		// Handle the non hardened component
+		bigval, ok := new(big.Int).SetString(component, 0)
+		if !ok {
+			return nil, fmt.Errorf("invalid component: %s", component)
+		}
+		max := math.MaxUint32 - value
+		if bigval.Sign() < 0 || bigval.Cmp(big.NewInt(int64(max))) > 0 {
+			if value == 0 {
+				return nil, fmt.Errorf("component %v out of allowed range [0, %d]", bigval, max)
+			}
+			return nil, fmt.Errorf("component %v out of allowed hardened range [0, %d]", bigval, max)
+		}
+		value += uint32(bigval.Uint64())
+
+		// Append and repeat
+		result = append(result, value)
+	}
+
+	return result, nil
+}
+
+func mnemonicToPrivateKey(mnemonic string, derivationPath string) ([]byte, error) {
 	// Generate a Bip32 HD wallet for the mnemonic and a user supplied password
 	seed := bip39.NewSeed(mnemonic, "")
 	// Generate a new master node using the seed.
@@ -63,31 +121,20 @@ func mnemonicToPrivateKey(mnemonic string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	// This gives the path: m/44H
-	acc44H, err := masterKey.NewChildKey(bip32.FirstHardenedChild + 44)
+
+	childIdxs, err := parseDerivationPath(derivationPath)
 	if err != nil {
 		return nil, err
 	}
-	// This gives the path: m/44H/60H
-	acc44H60H, err := acc44H.NewChildKey(bip32.FirstHardenedChild + 60)
-	if err != nil {
-		return nil, err
+
+	currentKey := masterKey
+	for _, childIdx := range childIdxs {
+		currentKey, err = currentKey.NewChildKey(childIdx)
+		if err != nil {
+			return nil, err
+		}
 	}
-	// This gives the path: m/44H/60H/0H
-	acc44H60H0H, err := acc44H60H.NewChildKey(bip32.FirstHardenedChild + 0)
-	if err != nil {
-		return nil, err
-	}
-	// This gives the path: m/44H/60H/0H/0
-	acc44H60H0H0, err := acc44H60H0H.NewChildKey(0)
-	if err != nil {
-		return nil, err
-	}
-	// This gives the path: m/44H/60H/0H/0/0
-	acc44H60H0H00, err := acc44H60H0H0.NewChildKey(0)
-	if err != nil {
-		return nil, err
-	}
-	privateKey := acc44H60H0H00.Key // 32 bytes private key
+
+	privateKey := currentKey.Key // 32 bytes private key
 	return privateKey, nil
 }
