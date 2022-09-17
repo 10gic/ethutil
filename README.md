@@ -10,8 +10,8 @@ GO111MODULE=on go install github.com/10gic/ethutil@latest
 ## Check Balance
 Check balance of an address:
 ```shell
-$ ethutil balance 0x756F45E3FA69347A9A973A725E3C98bC4db0b5a0
-addr 0x756F45E3FA69347A9A973A725E3C98bC4db0b5a0, balance 0.026990556 ether
+$ ethutil balance 0x79047aBf3af2a1061B108D71d6dc7BdB06474790
+addr 0x79047aBf3af2a1061B108D71d6dc7BdB06474790, balance 231.905355677037965414 ether
 ```
 
 ## Transfer ETH
@@ -224,7 +224,7 @@ Flags:
   -h, --help                              help for ethutil
       --max-fee-per-gas string            maximum fee per gas they are willing to pay total, unit is gwei. see eip1559
       --max-priority-fee-per-gas string   maximum fee per gas they are willing to give to miners, unit is gwei. see eip1559
-      --node string                       mainnet | ropsten | kovan | rinkeby | goerli | sepolia | sokol | bsc | heco, the node type (default "goerli")
+      --node string                       mainnet | goerli | sepolia | sokol | bsc | heco, the node type (default "goerli")
       --node-url string                   the target connection node url, if this option specified, the --node option is ignored
       --nonce int                         the nonce, -1 means check online (default -1)
   -k, --private-key string                the private key, eth would be send from this account

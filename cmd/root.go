@@ -53,9 +53,6 @@ const txTypeEip155 = "eip155"
 const txTypeEip1559 = "eip1559"
 
 const nodeMainnet = "mainnet"
-const nodeRopsten = "ropsten"
-const nodeKovan = "kovan"
-const nodeRinkeby = "rinkeby"
 const nodeGoerli = "goerli"
 const nodeSepolia = "sepolia"
 const nodeSokol = "sokol"
@@ -64,11 +61,8 @@ const nodeHeco = "heco"
 
 var nodeUrlMap = map[string]string{
 	nodeMainnet: "wss://mainnet.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472", // please replace infura project id
-	nodeRopsten: "wss://ropsten.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472", // please replace infura project id
-	nodeKovan:   "wss://kovan.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472",   // please replace infura project id
-	nodeRinkeby: "wss://rinkeby.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472", // please replace infura project id
 	nodeGoerli:  "wss://goerli.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472",  // please replace infura project id
-	nodeSepolia: "wss://sepolia.infura.io/v3/21a9f5ba4bce425795cac796a66d7472",  // please replace infura project id
+	nodeSepolia: "wss://sepolia.infura.io/v3/21a9f5ba4bce425795cac796a66d7472",    // please replace infura project id
 	nodeSokol:   "https://sokol.poa.network",
 	nodeBsc:     "https://bsc-dataseed1.binance.org",
 	nodeHeco:    "wss://ws-mainnet-node.huobichain.com",
@@ -76,9 +70,6 @@ var nodeUrlMap = map[string]string{
 
 var nodeTxExplorerUrlMap = map[string]string{
 	nodeMainnet: "https://etherscan.io/tx/",
-	nodeRopsten: "https://ropsten.etherscan.io/tx/",
-	nodeKovan:   "https://kovan.etherscan.io/tx/",
-	nodeRinkeby: "https://rinkeby.etherscan.io/tx/",
 	nodeGoerli:  "https://goerli.etherscan.io/tx/",
 	nodeSepolia: "https://sepolia.etherscan.io/tx/",
 	nodeSokol:   "https://blockscout.com/poa/sokol/tx/",
@@ -86,16 +77,13 @@ var nodeTxExplorerUrlMap = map[string]string{
 	nodeHeco:    "https://scan.hecochain.com/tx/",
 }
 
-var nodeApiUrlMap = map[string]string {
+var nodeApiUrlMap = map[string]string{
 	nodeMainnet: "https://api.etherscan.io/api?module=contract&action=getsourcecode&address=%s",
-	nodeRopsten: "https://api-ropsten.etherscan.io/api?module=contract&action=getsourcecode&address=%s",
-	nodeKovan: "https://api-kovan.etherscan.io/api?module=contract&action=getsourcecode&address=%s",
-	nodeRinkeby: "https://api-rinkeby.etherscan.io/api?module=contract&action=getsourcecode&address=%s",
-	nodeGoerli: "https://api-goerli.etherscan.io/api?module=contract&action=getsourcecode&address=%s",
+	nodeGoerli:  "https://api-goerli.etherscan.io/api?module=contract&action=getsourcecode&address=%s",
 	nodeSepolia: "https://api-sepolia.etherscan.io/api?module=contract&action=getsourcecode&address=%s",
-	nodeSokol: "https://blockscout.com/poa/sokol/api?module=contract&action=getsourcecode&address=%s",
-	nodeBsc: "https://api.bscscan.com/api?module=contract&action=getsourcecode&address=%s",
-	nodeHeco: "https://api.hecoinfo.com/api?module=contract&action=getsourcecode&address=%s",
+	nodeSokol:   "https://blockscout.com/poa/sokol/api?module=contract&action=getsourcecode&address=%s",
+	nodeBsc:     "https://api.bscscan.com/api?module=contract&action=getsourcecode&address=%s",
+	nodeHeco:    "https://api.hecoinfo.com/api?module=contract&action=getsourcecode&address=%s",
 }
 
 // Execute cobra root command
@@ -108,7 +96,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVarP(&globalOptNodeUrl, "node-url", "", "", "the target connection node url, if this option specified, the --node option is ignored")
-	rootCmd.PersistentFlags().StringVarP(&globalOptNode, "node", "", "goerli", "mainnet | ropsten | kovan | rinkeby | goerli | sepolia |sokol | bsc | heco, the node type")
+	rootCmd.PersistentFlags().StringVarP(&globalOptNode, "node", "", "goerli", "mainnet | goerli | sepolia |sokol | bsc | heco, the node type")
 	rootCmd.PersistentFlags().StringVarP(&globalOptGasPrice, "gas-price", "", "", "the gas price, unit is gwei.")
 	rootCmd.PersistentFlags().StringVarP(&globalOptMaxPriorityFeePerGas, "max-priority-fee-per-gas", "", "", "maximum fee per gas they are willing to give to miners, unit is gwei. see eip1559")
 	rootCmd.PersistentFlags().StringVarP(&globalOptMaxFeePerGas, "max-fee-per-gas", "", "", "maximum fee per gas they are willing to pay total, unit is gwei. see eip1559")
@@ -144,7 +132,7 @@ func initConfig() {
 	var err error
 
 	// validation
-	if !contains([]string{nodeMainnet, nodeRopsten, nodeKovan, nodeRinkeby, nodeGoerli, nodeSepolia, nodeSokol,
+	if !contains([]string{nodeMainnet, nodeGoerli, nodeSepolia, nodeSokol,
 		nodeBsc, nodeHeco}, globalOptNode) {
 		log.Printf("invalid option for --node: %v", globalOptNode)
 		_ = rootCmd.Help()
