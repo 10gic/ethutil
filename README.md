@@ -224,7 +224,7 @@ Flags:
   -h, --help                              help for ethutil
       --max-fee-per-gas string            maximum fee per gas they are willing to pay total, unit is gwei. see eip1559
       --max-priority-fee-per-gas string   maximum fee per gas they are willing to give to miners, unit is gwei. see eip1559
-      --node string                       mainnet | ropsten | kovan | rinkeby | goerli | sokol | bsc | heco, the node type (default "kovan")
+      --node string                       mainnet | ropsten | kovan | rinkeby | goerli | sepolia | sokol | bsc | heco, the node type (default "kovan")
       --node-url string                   the target connection node url, if this option specified, the --node option is ignored
       --nonce int                         the nonce, -1 means check online (default -1)
   -k, --private-key string                the private key, eth would be send from this account
