@@ -108,7 +108,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVarP(&globalOptNodeUrl, "node-url", "", "", "the target connection node url, if this option specified, the --node option is ignored")
-	rootCmd.PersistentFlags().StringVarP(&globalOptNode, "node", "", "kovan", "mainnet | ropsten | kovan | rinkeby | goerli | sepolia |sokol | bsc | heco, the node type")
+	rootCmd.PersistentFlags().StringVarP(&globalOptNode, "node", "", "goerli", "mainnet | ropsten | kovan | rinkeby | goerli | sepolia |sokol | bsc | heco, the node type")
 	rootCmd.PersistentFlags().StringVarP(&globalOptGasPrice, "gas-price", "", "", "the gas price, unit is gwei.")
 	rootCmd.PersistentFlags().StringVarP(&globalOptMaxPriorityFeePerGas, "max-priority-fee-per-gas", "", "", "maximum fee per gas they are willing to give to miners, unit is gwei. see eip1559")
 	rootCmd.PersistentFlags().StringVarP(&globalOptMaxFeePerGas, "max-fee-per-gas", "", "", "maximum fee per gas they are willing to pay total, unit is gwei. see eip1559")
