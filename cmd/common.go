@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -38,6 +39,22 @@ func contains(arr []string, str string) bool {
 // checkErr panic if err != nil.
 func checkErr(err error) {
 	if err != nil {
+		if rpcErr, ok := err.(rpc.DataError); ok {
+			var errData = rpcErr.ErrorData()
+			log.Printf("data field in error: %v", errData)
+			if errData != nil {
+				if errStr, ok := errData.(string); ok && len(errStr) >= 10 {
+					var funcHash = errStr[0:10]
+					funcSig, err := getFuncSig(funcHash)
+					if err != nil {
+						log.Printf("getFuncSig failed %v", err)
+					}
+					for _, data := range funcSig {
+						log.Printf("%s is signature of %s", funcHash, data)
+					}
+				}
+			}
+		}
 		log.Fatalf("%v", err)
 		// panic(err)
 	}
@@ -439,4 +456,48 @@ func RecoverPubkey(v, r, s *big.Int, msg []byte) ([]byte, error) {
 	// crypto.Ecrecover signature: 65-byte compact ECDSA signature
 	// crypto.Ecrecover return 65 bytes uncompressed public key
 	return crypto.Ecrecover(msg, signature)
+}
+
+// getFuncSig recover function signature from 4 bytes hash
+// For example:
+//   param: "0x8c905368"
+//   return: ["NotEnoughFunds(uint256,uint256)"]
+//
+// This function uses openchain API
+// $ curl -X 'GET' 'https://api.openchain.xyz/signature-database/v1/lookup?function=0x8c905368&filter=true'
+// {"ok":true,"result":{"event":{},"function":{"0x8c905368":[{"name":"NotEnoughFunds(uint256,uint256)","filtered":false}]}}}
+// See https://openchain.xyz/signatures
+func getFuncSig(funcHash string) ([]string, error) {
+	var url = fmt.Sprintf("https://api.openchain.xyz/signature-database/v1/lookup?function=%s&filter=true", funcHash)
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	type funcSig struct {
+		Name     string `json:"name"`
+		Filtered bool   `json:"filtered"`
+	}
+	type respMsg struct {
+		Ok     bool `json:"ok"`
+		Result struct {
+			Function map[string][]funcSig `json:"function"`
+		} `json:"result"`
+	}
+	var data respMsg
+	if err := json.Unmarshal(body, &data); err != nil {
+		return nil, err
+	}
+
+	var rc []string
+	for _, data := range data.Result.Function[funcHash] {
+		rc = append(rc, data.Name)
+	}
+
+	return rc, nil
 }

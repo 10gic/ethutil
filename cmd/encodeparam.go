@@ -775,42 +775,44 @@ func typeNormalize(input string) string {
 
 // ABI example:
 // [
-//  {
-//      "inputs": [],
-//      "stateMutability": "nonpayable",
-//      "type": "constructor"
-//  },
-//	{
-//		"inputs": [
-//			{
-//				"internalType": "uint256[]",
-//				"name": "_a",
-//				"type": "uint256[]"
-//			},
-//			{
-//				"internalType": "address[]",
-//				"name": "_addr",
-//				"type": "address[]"
-//			}
-//		],
-//		"name": "f1",
-//		"outputs": [],
-//		"stateMutability": "nonpayable",
-//		"type": "function"
-//	},
-//	{
-//		"inputs": [],
-//		"name": "f2",
-//		"outputs": [
-//			{
-//				"internalType": "uint256",
-//				"name": "",
-//				"type": "uint256"
-//			}
-//		],
-//		"stateMutability": "view",
-//		"type": "function"
-//	},
+//
+//	 {
+//	     "inputs": [],
+//	     "stateMutability": "nonpayable",
+//	     "type": "constructor"
+//	 },
+//		{
+//			"inputs": [
+//				{
+//					"internalType": "uint256[]",
+//					"name": "_a",
+//					"type": "uint256[]"
+//				},
+//				{
+//					"internalType": "address[]",
+//					"name": "_addr",
+//					"type": "address[]"
+//				}
+//			],
+//			"name": "f1",
+//			"outputs": [],
+//			"stateMutability": "nonpayable",
+//			"type": "function"
+//		},
+//		{
+//			"inputs": [],
+//			"name": "f2",
+//			"outputs": [
+//				{
+//					"internalType": "uint256",
+//					"name": "",
+//					"type": "uint256"
+//				}
+//			],
+//			"stateMutability": "view",
+//			"type": "function"
+//		},
+//
 // ......
 // ]
 type AbiData struct {

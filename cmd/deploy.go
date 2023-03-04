@@ -153,7 +153,7 @@ func findContractName(deploySrcFile string) string {
 		return ""
 	}
 
-	lastContract := matches[len(matches) - 1]
+	lastContract := matches[len(matches)-1]
 	re = regexp.MustCompile(`^[ ]*contract[ ]+(?P<Name>[a-zA-Z0-9_]+) `)
 	matches = re.FindStringSubmatch(lastContract)
 	nameIndex := re.SubexpIndex("Name")
