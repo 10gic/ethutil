@@ -292,12 +292,88 @@ func Transact(rpcClient *rpc.Client, client *ethclient.Client, privateKey *ecdsa
 	var tx *types.Transaction
 
 	if globalOptTxType == txTypeEip1559 {
-		// FIXME: Use rpc eth_feeHistory to estimate default maxPriorityFeePerGas and maxFeePerGas
+		var maxPriorityFeePerGasEstimate = new(big.Int)
+		var maxFeePerGasEstimate = new(big.Int)
+		if globalOptMaxPriorityFeePerGas == "" || globalOptMaxFeePerGas == "" {
+			// Use rpc eth_feeHistory to estimate default maxPriorityFeePerGas and maxFeePerGas
+			// See https://docs.alchemy.com/docs/how-to-build-a-gas-fee-estimator-using-eip-1559
+			//
+			// $ curl -X POST --data '{ "id": 1, "jsonrpc": "2.0", "method": "eth_feeHistory", "params": ["0x4", "latest", [5, 50, 95]] }' https://mainnet.infura.io/v3/21a9f5ba4bce425795cac796a66d7472
+			// {
+			//  "jsonrpc": "2.0",
+			//  "id": 1,
+			//  "result": {
+			//    "baseFeePerGas": [
+			//      "0x4ed3ef336",
+			//      "0x4d2c282cd",
+			//      "0x4db586991",
+			//      "0x4d8275e8e",
+			//      "0x4b5fb0a47"
+			//    ],
+			//    "gasUsedRatio": [
+			//      0.41600023333333336,
+			//      0.5278128666666667,
+			//      0.4897323,
+			//      0.3897776666666667
+			//    ],
+			//    "oldestBlock": "0xffc0a9",
+			//    "reward": [
+			//      [
+			//        "0x6b51f67",
+			//        "0x3b9aca00",
+			//        "0x106853ddd8"
+			//      ],
+			//      [
+			//        "0xa9970dc",
+			//        "0x1dcd6500",
+			//        "0x10abffd64"
+			//      ],
+			//      [
+			//        "0x6190547",
+			//        "0x1dcd6500",
+			//        "0x9becf3d3c"
+			//      ],
+			//      [
+			//        "0x94a104a",
+			//        "0x1dcd6500",
+			//        "0x1032d8cdb"
+			//      ]
+			//    ]
+			//  }
+			// }
+			feeHistory, err := client.FeeHistory(context.Background(), 4, nil, []float64{5, 50, 95})
+			checkErr(err)
+			var slow big.Int
+			slow.Add(feeHistory.Reward[0][0], feeHistory.Reward[1][0])
+			slow.Add(&slow, feeHistory.Reward[2][0])
+			slow.Div(&slow, big.NewInt(3))
+
+			var average big.Int
+			average.Add(feeHistory.Reward[0][1], feeHistory.Reward[1][1])
+			average.Add(&average, feeHistory.Reward[2][1])
+			average.Div(&average, big.NewInt(3))
+
+			var fast big.Int
+			fast.Add(feeHistory.Reward[0][2], feeHistory.Reward[1][2])
+			fast.Add(&fast, feeHistory.Reward[2][2])
+			fast.Div(&fast, big.NewInt(3))
+
+			// Currently, slow/fast are not used. we use average value
+			maxPriorityFeePerGasEstimate = &average
+			// log.Printf("maxPriorityFeePerGasEstimate = %v", maxPriorityFeePerGasEstimate.String())
+
+			pendingBlock, err := client.BlockByNumber(context.Background(), nil)
+			checkErr(err)
+			maxFeePerGasEstimate = maxFeePerGasEstimate.Add(pendingBlock.BaseFee(), maxPriorityFeePerGasEstimate)
+			// log.Printf("maxFeePerGasEstimate = %v", maxFeePerGasEstimate.String())
+		}
 
 		var maxPriorityFeePerGas *big.Int
 		if globalOptMaxPriorityFeePerGas == "" {
-			return "", fmt.Errorf("must specify --max-priority-fee-per-gas for eip1559 tx")
+			// Use estimate value
+			maxPriorityFeePerGas = maxPriorityFeePerGasEstimate
 		} else {
+			// Use the value set by the user
 			maxPriorityFeePerGasDecimal, _ := decimal.NewFromString(globalOptMaxPriorityFeePerGas)
 			// convert from gwei to wei
 			maxPriorityFeePerGas = maxPriorityFeePerGasDecimal.Mul(decimal.RequireFromString("1000000000")).BigInt()
@@ -305,8 +381,10 @@ func Transact(rpcClient *rpc.Client, client *ethclient.Client, privateKey *ecdsa
 
 		var maxFeePerGas *big.Int
 		if globalOptMaxFeePerGas == "" {
-			return "", fmt.Errorf("must specify --max-fee-per-gas for eip1559 tx")
+			// Use estimate value
+			maxFeePerGas = maxFeePerGasEstimate
 		} else {
+			// Use the value set by the user
 			maxFeePerGasDecimal, _ := decimal.NewFromString(globalOptMaxFeePerGas)
 			// convert from gwei to wei
 			maxFeePerGas = maxFeePerGasDecimal.Mul(decimal.RequireFromString("1000000000")).BigInt()
