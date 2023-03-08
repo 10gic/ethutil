@@ -73,8 +73,8 @@ func decodeEip155(rawTxHexData string) {
 
 	v, r, s := tx.RawSignatureValues()
 	fmt.Printf("v = %s\n", v.String())
-	fmt.Printf("r (hex) = %x\n", r)
-	fmt.Printf("s (hex) = %x\n", s)
+	fmt.Printf("r (hex) = %064x\n", r)
+	fmt.Printf("s (hex) = %064x\n", s)
 
 	fmt.Printf("\n")
 	fmt.Printf("derived info:\n")
@@ -137,8 +137,8 @@ func decodeEip2930(transactionType int, transactionPayload string) {
 	fmt.Printf("data (hex) = %x\n", accessListTx.Data)
 	fmt.Printf("accessList = %v\n", accessListTx.AccessList)
 	fmt.Printf("yParity (ecdsa recovery id) = %s\n", accessListTx.V)
-	fmt.Printf("r (hex) = %x\n", accessListTx.R)
-	fmt.Printf("s (hex) = %x\n", accessListTx.S)
+	fmt.Printf("r (hex) = %064x\n", accessListTx.R)
+	fmt.Printf("s (hex) = %064x\n", accessListTx.S)
 
 	fmt.Printf("\n")
 	fmt.Printf("derived info:\n")
@@ -196,8 +196,8 @@ func decodeEip1559(transactionType int, transactionPayload string) {
 	fmt.Printf("data (hex) = %x\n", dynamicFeeTx.Data)
 	fmt.Printf("accessList = %v\n", dynamicFeeTx.AccessList)
 	fmt.Printf("yParity (ecdsa recovery id) = %s\n", dynamicFeeTx.V)
-	fmt.Printf("r (hex) = %x\n", dynamicFeeTx.R)
-	fmt.Printf("s (hex) = %x\n", dynamicFeeTx.S)
+	fmt.Printf("r (hex) = %064x\n", dynamicFeeTx.R)
+	fmt.Printf("s (hex) = %064x\n", dynamicFeeTx.S)
 
 	fmt.Printf("\n")
 	fmt.Printf("derived info:\n")
