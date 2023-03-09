@@ -109,6 +109,7 @@ var transferCmd = &cobra.Command{
 			_ = cmd.Help()
 			os.Exit(1)
 		}
+		log.Printf("Current network is %v", globalOptNode)
 
 		targetAddress := args[0]
 		transferAmt := args[1]

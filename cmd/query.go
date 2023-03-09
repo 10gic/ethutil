@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
@@ -29,6 +28,7 @@ var queryCmd = &cobra.Command{
 			_ = cmd.Help()
 			os.Exit(1)
 		}
+		log.Printf("Current network is %v", globalOptNode)
 
 		InitGlobalClient(globalOptNodeUrl)
 
@@ -48,7 +48,7 @@ var queryCmd = &cobra.Command{
 		}
 
 		if queryCmdABIFile != "" {
-			abiContent, err := ioutil.ReadFile(queryCmdABIFile)
+			abiContent, err := os.ReadFile(queryCmdABIFile)
 			if err != nil {
 				log.Fatal(err)
 			}

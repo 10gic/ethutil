@@ -141,9 +141,6 @@ func initConfig() {
 
 	if globalOptNodeUrl == "" {
 		globalOptNodeUrl = nodeUrlMap[globalOptNode]
-
-		// Print current network if --node-url is not specified
-		log.Printf("Current network is %v", globalOptNode)
 	}
 
 	if globalOptGasPrice != "" {

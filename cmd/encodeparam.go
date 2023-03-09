@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"math/big"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -36,7 +36,7 @@ var encodeParamCmd = &cobra.Command{
 		inputArgData := args[1:]
 
 		if callCmdABIFile != "" {
-			abiContent, err := ioutil.ReadFile(callCmdABIFile)
+			abiContent, err := os.ReadFile(callCmdABIFile)
 			if err != nil {
 				log.Fatal(err)
 			}

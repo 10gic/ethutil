@@ -6,7 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/spf13/cobra"
-	"io/ioutil"
+	"io"
 	"os"
 )
 
@@ -37,10 +37,10 @@ func computeAndOutputKeccak(f string) {
 	var err error
 
 	if f == "-" {
-		fileContent, err = ioutil.ReadAll(os.Stdin)
+		fileContent, err = io.ReadAll(os.Stdin)
 		checkErr(err)
 	} else {
-		fileContent, err = ioutil.ReadFile(f)
+		fileContent, err = os.ReadFile(f)
 		checkErr(err)
 	}
 

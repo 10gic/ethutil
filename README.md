@@ -113,7 +113,7 @@ $ ethutil --terse gen-private-key -n 10
 
 ## Dump Address From Private Key
 ```shell
-$ ethutil dump-address --private-key-or-mnemonic 0xef065dcbc43081c63c0fbf389ec8df3872d9d61b1bc2e98d7a0a4395d11314d2
+$ ethutil dump-address 0xef065dcbc43081c63c0fbf389ec8df3872d9d61b1bc2e98d7a0a4395d11314d2
 private key 0xef065dcbc43081c63c0fbf389ec8df3872d9d61b1bc2e98d7a0a4395d11314d2, addr 0xB2aC853cF815B47903bc19BF4860540306F4f944
 ```
 
