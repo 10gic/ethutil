@@ -57,7 +57,7 @@ var deployCmd = &cobra.Command{
 
 			//log.Printf("solcjs output to dir %v", dir)
 
-			cmd := exec.Command("solcjs", "--base-path", ".", "--bin", "--abi", "--output-dir", dir, deploySrcFile)
+			cmd := exec.Command("solcjs", "--base-path", ".", "--include-path", "./node_modules", "--bin", "--abi", "--output-dir", dir, deploySrcFile)
 			log.Printf("executing command %v", cmd.String())
 			var out bytes.Buffer
 			var stderr bytes.Buffer
