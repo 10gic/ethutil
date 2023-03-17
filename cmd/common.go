@@ -43,7 +43,7 @@ func checkErr(err error) {
 			if errData != nil {
 				if errStr, ok := errData.(string); ok && len(errStr) >= 10 {
 					var funcHash = errStr[0:10]
-					funcSig, err := getFuncSig(funcHash)
+					funcSig, err := GetFuncSig(funcHash)
 					if err != nil {
 						log.Printf("getFuncSig failed %v", err)
 					}
@@ -543,7 +543,7 @@ func RecoverPubkey(v, r, s *big.Int, msg []byte) ([]byte, error) {
 // $ curl -X 'GET' 'https://api.openchain.xyz/signature-database/v1/lookup?function=0x8c905368&filter=true'
 // {"ok":true,"result":{"event":{},"function":{"0x8c905368":[{"name":"NotEnoughFunds(uint256,uint256)","filtered":false}]}}}
 // See https://openchain.xyz/signatures
-func getFuncSig(funcHash string) ([]string, error) {
+func GetFuncSig(funcHash string) ([]string, error) {
 	var url = fmt.Sprintf("https://api.openchain.xyz/signature-database/v1/lookup?function=%s&filter=true", funcHash)
 	resp, err := http.Get(url)
 	if err != nil {

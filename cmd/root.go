@@ -117,6 +117,7 @@ func init() {
 	rootCmd.AddCommand(deployCmd)
 	rootCmd.AddCommand(deployErc20Cmd)
 	rootCmd.AddCommand(dropTxCmd)
+	rootCmd.AddCommand(fourByteCmd)
 	rootCmd.AddCommand(encodeParamCmd)
 	rootCmd.AddCommand(genkeyCmd)
 	rootCmd.AddCommand(dumpAddrCmd)

@@ -98,7 +98,7 @@ encoded parameters (input data) = 0x0000000000000000000000008f36975cdea2e6e64f85
 
 ## Generate New Private Key
 ```shell
-$ ethutil --terse gen-private-key -n 10
+$ ethutil --terse gen-key -n 10
 0x4a7a7070d616c70ca7caa5e34dfa944f983d530be4831e6e0086a781a679c601 0x356EC6F0b43bdEB18C291D5e629c1585c3c0BA73
 0x692d3eb6ea9df4fb67745b024aa08b6c3f0e14daaba5f13f060fa25ba1d8505a 0x7cdF8bA6cf3599a8892Cc0e7050419d40d03c829
 0x9981fcfe901dc14ee20495c2fd61a3895ad1c9bda44d996e392a86d2ecbb5d77 0x8959A4335066876588E3a2362732160cDAb5e1f0
@@ -205,15 +205,17 @@ Available Commands:
   query                 Invokes the (constant) contract method
   deploy                Deploy contract
   deploy-erc20          Deploy an ERC20 token
+  4byte                 Get the function signatures for the given selector from https://openchain.xyz/signatures
   drop-tx               Drop pending tx for address
   encode-param          Encode input arguments, it's useful when you call contract's method manually
-  gen-private-key       Generate eth private key and its address
+  gen-key               Generate eth private key and its address
   dump-address          Dump address from private key or mnemonic
   compute-contract-addr Compute contract address before deployment
   decode-tx             Decode raw transaction
   code                  Get runtime bytecode of a contract on the blockchain
   erc20                 Call ERC20 contract, a helper for subcommand call/query
   keccak                Compute keccak hash
+  personal-sign         Create EIP191 personal sign
   download-src          Download source code of contract from block explorer platform, eg. etherscan.
   help                  Help about any command
 
