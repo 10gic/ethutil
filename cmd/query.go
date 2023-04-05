@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
@@ -76,6 +77,12 @@ func printContractReturnData(funcDefinition string, output []byte) {
 	var v = make(map[string]interface{})
 	returnArgs, err := buildReturnArgs(funcDefinition)
 	checkErr(err)
+
+	if len(returnArgs) == 0 {
+		// Return type of function not specified
+		fmt.Printf("Return type of function not specified, print raw data\n%v\n", hex.EncodeToString(output))
+		return
+	}
 
 	// Unpack hex data into v
 	err = returnArgs.UnpackIntoMap(v, output)

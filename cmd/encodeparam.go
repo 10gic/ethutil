@@ -1,14 +1,13 @@
 package cmd
 
 import (
-	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"math/big"
 	"os"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -105,11 +104,11 @@ func dumpTxInputData(txInputData []byte) {
 }
 
 // extractFuncName extracts function name from arg input
-// input example:
-// fun1
-// fun1(uint256)
-// function fun1
-// function fun1(uint256)
+// Examples:
+// fun1  ->  fun1
+// fun1(uint256)  -> fun1
+// function fun1  -> fun1
+// function fun1(uint256)  ->  fun1
 func extractFuncName(input string) string {
 	if strings.HasPrefix(input, "function ") {
 		input = input[len("function "):] // remove leading string "function "
@@ -129,13 +128,21 @@ func extractFuncName(input string) string {
 // input: "function add(uint256   xx, address xx, bool xx)"
 // output: "add", ["uint256", "address", "bool"], nil
 //
-// Example 2 (no function name):
+// Example 2:
+// input: "function add(uint256   xx, address xx, bool xx) returns (address)"
+// output: "add", ["uint256", "address", "bool"], nil
+//
+// Example 3 (no function name):
 // input: "(uint256, address, bool)"
 // output: "", ["uint256", "address", "bool"], nil
 //
-// Example 3 (no parenthesis):
+// Example 4 (no parenthesis):
 // input: "test"
 // output: "test", [], nil
+//
+// Example 5 (with tuple):
+// input:  "function fn1((uint256, address), bool)"
+// output: "fn1", ["(uint256, address)", "bool"], nil
 func parseFuncSignature(input string) (string, []string, error) {
 	if strings.HasPrefix(input, "function ") {
 		input = input[len("function "):] // remove leading string "function "
@@ -148,6 +155,12 @@ func parseFuncSignature(input string) (string, []string, error) {
 
 	input = strings.TrimLeft(input, " ")
 
+	// remove function returns declaration
+	returnsLoc := strings.LastIndex(input, "returns")
+	if returnsLoc > 0 {
+		input = input[:returnsLoc] // `fn1(bool) returns (address)` -> `fn1(bool)`
+	}
+
 	leftParenthesisLoc := strings.Index(input, "(")
 	if leftParenthesisLoc < 0 {
 		return "", nil, fmt.Errorf("char ( is not found in function signature")
@@ -155,7 +168,7 @@ func parseFuncSignature(input string) (string, []string, error) {
 	funcName := input[:leftParenthesisLoc] // remove all characters from char '('
 	funcName = strings.TrimSpace(funcName)
 
-	rightParenthesisLoc := strings.Index(input, ")")
+	rightParenthesisLoc := strings.LastIndex(input, ")")
 	if rightParenthesisLoc < 0 {
 		return "", nil, fmt.Errorf("char ) is not found in function signature")
 	}
@@ -163,19 +176,29 @@ func parseFuncSignature(input string) (string, []string, error) {
 	if strings.TrimSpace(argsPart) == "" {
 		return funcName, nil, nil
 	}
-	args := strings.Split(argsPart, ",")
+	args := splitData(argsPart)
 	for index, arg := range args {
-		fields := strings.Fields(arg)
-		if len(fields) == 0 {
-			return "", nil, fmt.Errorf("signature `%v` invalid type missing in args", input)
-		}
-		args[index] = typeNormalize(fields[0]) // first field is type. for example, "uint256 xx", first field is uint256
+		// log.Printf("arg %v", arg)
+		if strings.HasPrefix(arg, "(") && strings.HasSuffix(arg, ")") { // tuple
+			args[index] = arg // do nothings, the value of `args[index]` is `arg` before assignment
+		} else if strings.HasSuffix(arg, "]") { // array
+			args[index] = arg // do nothings, the value of `args[index]` is `arg` before assignment
+		} else {
+			fields := strings.Fields(arg)
+			if len(fields) == 0 {
+				return "", nil, fmt.Errorf("signature `%v` invalid type missing in args", input)
+			}
+			// first field is type. for example,
+			// "uint256 xx", first field is uint256
+			// "uint256[] xx", first field is uint256[]
+			args[index] = typeNormalize(fields[0])
 
-		if len(fields) >= 2 && fields[0] == "address" && strings.HasPrefix(fields[1], "payable[") {
-			// handle case:
-			// f1(address payable[] memory a, uint256 b)
-			// f1(address payable[3] memory a, uint256 b)
-			args[index] = strings.Replace(fields[1], "payable", "address", 1) // address[] or address[3]
+			if len(fields) >= 2 && fields[0] == "address" && strings.HasPrefix(fields[1], "payable[") {
+				// handle case:
+				// f1(address payable[] memory a, uint256 b)
+				// f1(address payable[3] memory a, uint256 b)
+				args[index] = fields[0] + strings.Replace(fields[1], "payable", "", 1) // args[index] = address[] or address[3]
+			}
 		}
 	}
 
@@ -189,7 +212,7 @@ func parseFuncSignature(input string) (string, []string, error) {
 // return: 000000000000000000000000000000000000000000000000000000000000007b0000000000000000000000008f36975cdea2e6e64f85719788c8efbbe89dfbbb0000000000000000000000000000000000000000000000000000000000000001
 func encodeParameters(inputArgTypes, inputArgData []string) ([]byte, error) {
 	var theTypes abi.Arguments
-	var theArgData []interface{}
+	var theArgData []any
 	theTypes, theArgData, err := buildArgumentAndData(inputArgTypes, inputArgData)
 	if err != nil {
 		return nil, fmt.Errorf("buildArgumentAndData fail: %s", err)
@@ -201,34 +224,111 @@ func encodeParameters(inputArgTypes, inputArgData []string) ([]byte, error) {
 	return bytes, nil
 }
 
-func buildArgumentAndData(inputArgTypes, inputArgData []string) (abi.Arguments, []interface{}, error) {
-	var theTypes abi.Arguments
-	var theArgData []interface{}
-	for index, inputType := range inputArgTypes {
-		typ, err := abi.NewType(typeNormalize(inputType), "", nil)
-		if err != nil {
-			return nil, nil, fmt.Errorf("abi.NewType fail: %w", err)
-		}
-		theTypes = append(theTypes, abi.Argument{Type: typ})
-		if strings.Count(inputType, "[") == 1 && strings.Count(inputType, "]") == 1 { // handle array type
-			var arrayElementType string
-			leftParenthesisLoc := strings.Index(inputType, "[")
-			arrayElementType = inputType[:leftParenthesisLoc] // remove all characters from char '['
+// buildTupleType build tuple abi.Type
+// An example:
+// tupleType: "(uint256, bool)"
+// return: abi.NewType("tuple", "", []abi.ArgumentMarshaling{{Name: "Field0", Type: "uint256"}, {Name: "Field1", Type: "bool"}})
+func buildTupleType(tupleType string) (abi.Type, error) {
+	var components []abi.ArgumentMarshaling
+	arrayOfType := splitData(tupleType)
+	for index, typ := range arrayOfType {
+		components = append(components, abi.ArgumentMarshaling{
+			Name: "Field" + strconv.Itoa(index),
+			Type: typ,
+		})
+	}
+	return abi.NewType("tuple", "", components)
+}
 
-			var arrayOfTypes, arrayOfData []string
-			arrayOfData, err := parseArrayData(inputArgData[index])
+// buildTupleArrayType build tuple array abi.Type
+// An example:
+// tupleType: "(uint256, bool)[5]"
+// return: abi.NewType("tuple[5]", "", []abi.ArgumentMarshaling{{Name: "Field0", Type: "uint256"}, {Name: "Field1", Type: "bool"}})
+func buildTupleArrayType(tupleType string) (abi.Type, error) {
+	// If tupleType is (bool,uint256)[5], then
+	// tupleTypePart1 is (bool,uint256)
+	// tupleTypePart2 is 5
+	tupleTypePart1 := tupleType[0:strings.LastIndex(tupleType, "[")]
+	// grab the slice size with regexp
+	re := regexp.MustCompile("[0-9]+")
+	arrayOfType := splitData(tupleTypePart1)
+
+	tupleTypePart2 := tupleType[strings.LastIndex(tupleType, "["):]
+	intz := re.FindString(tupleTypePart2)
+
+	var components []abi.ArgumentMarshaling
+	for index, typ := range arrayOfType {
+		components = append(components, abi.ArgumentMarshaling{
+			Name: "Field" + strconv.Itoa(index),
+			Type: typ,
+		})
+	}
+	return abi.NewType(fmt.Sprintf("tuple[%s]", intz), "", components)
+}
+
+func buildArgumentAndData(inputArgTypes, inputArgData []string) (abi.Arguments, []any, error) {
+	// log.Printf("inputArgTypes = %v, inputArgData = %v", inputArgTypes, inputArgData)
+	var theTypes abi.Arguments
+	var theArgData []any
+	for index, inputType := range inputArgTypes {
+		var typ abi.Type
+		var err error
+
+		var isArray, _ = regexp.MatchString(`^.+\[\d*\]$`, inputType)                        // dynamic array xxx[] or fixed-length array xxx[4]
+		var isTuple = strings.HasPrefix(inputType, "(") && strings.HasSuffix(inputType, ")") // (bool, uint256)
+		var isTupleArray, _ = regexp.MatchString(`^\(.+\)\[\d*\]$`, inputType)               // (bool, uint256)[] or (bool, uint256)[3]
+
+		if isTuple {
+			typ, err = buildTupleType(inputType)
 			if err != nil {
-				return nil, nil, fmt.Errorf("parseArrayData fail: %w", err)
+				return nil, nil, fmt.Errorf("buildTupleType fail: %w", err)
 			}
-			for _ = range arrayOfData {
+		} else if isTupleArray {
+			typ, err = buildTupleArrayType(inputType)
+			if err != nil {
+				return nil, nil, fmt.Errorf("buildTupleArrayType fail: %w", err)
+			}
+		} else {
+			typ, err = abi.NewType(typeNormalize(inputType), "", nil)
+			if err != nil {
+				return nil, nil, fmt.Errorf("abi.NewType fail: %w", err)
+			}
+		}
+		// log.Printf("arg typ %+v", typ)
+		theTypes = append(theTypes, abi.Argument{Type: typ})
+
+		if isArray { // handle array type
+			var arrayElementType string
+			leftParenthesisLoc := strings.LastIndex(inputType, "[")
+			arrayElementType = inputType[:leftParenthesisLoc] // remove all chars from char '['. If inputType is bool[], then arrayElementType is bool
+			arrayElementType = strings.TrimSpace(arrayElementType)
+
+			var arrayOfTypes []string
+			log.Printf("before splitData %v", inputArgData[index])
+			arrayOfData := splitData(inputArgData[index])
+			log.Printf("after splitData %v", arrayOfData)
+			// log.Printf("input %v, arrayOfData %+v", inputArgData[index], arrayOfData)
+			for range arrayOfData {
 				arrayOfTypes = append(arrayOfTypes, typeNormalize(arrayElementType)) // `address[3]`  -> `[address, address, address]`
 			}
 
-			_, datas, err := buildArgumentAndData(arrayOfTypes, arrayOfData)
+			args, datas, err := buildArgumentAndData(arrayOfTypes, arrayOfData)
 			if err != nil {
 				return nil, nil, fmt.Errorf("buildArgumentAndData fail: %w", err)
 			}
-			if arrayElementType == "string" {
+
+			//var elemType = args[0].Type
+			//if IsDynamicType(elemType) {
+			if isTupleArray {
+				// In case of:
+				// inputType is array of tuple, e.g. (uint256, bool)[]
+				// arrayElementType is tuple, e.g. (uint256, bool)
+				slice := reflect.MakeSlice(reflect.SliceOf(args[0].Type.GetType()), 0, 0)
+				for _, data := range datas {
+					slice = reflect.Append(slice, reflect.ValueOf(data).Elem())
+				}
+				theArgData = append(theArgData, slice.Interface())
+			} else if arrayElementType == "string" { // FIXME: for all kind of arrayElementType, we can also refactor it to use reflect
 				// datas ([]interface {})   --->  elementData ([]string)
 				var elementData []string
 				for _, data := range datas {
@@ -503,265 +603,324 @@ func buildArgumentAndData(inputArgTypes, inputArgData []string) (abi.Arguments, 
 			} else {
 				return nil, nil, fmt.Errorf("type %v not implemented in array type currently", inputType)
 			}
-		} else if inputType == "string" {
-			theArgData = append(theArgData, inputArgData[index])
-		} else if inputType == "int8" {
-			i, err := strconv.ParseInt(inputArgData[index], 10, 64)
+		} else if isTuple { // handle Solidity struct (i.e. ABI tuple)
+			arrayOfData := splitData(inputArgData[index])
+			tupleData, err := BuildTupleArgData(typ, arrayOfData)
 			if err != nil {
-				return nil, nil, fmt.Errorf("arg (position %v) invalid, %s cannot covert to type %v", index, inputArgData[index], inputType)
+				return nil, nil, fmt.Errorf("BuildTupleArgData fail: %w", err)
 			}
-			theArgData = append(theArgData, int8(i))
-		} else if inputType == "int16" {
-			i, err := strconv.ParseInt(inputArgData[index], 10, 64)
-			if err != nil {
-				return nil, nil, fmt.Errorf("arg (position %v) invalid, %s cannot covert to type %v", index, inputArgData[index], inputType)
-			}
-			theArgData = append(theArgData, int16(i))
-		} else if inputType == "int32" {
-			i, err := strconv.ParseInt(inputArgData[index], 10, 64)
-			if err != nil {
-				return nil, nil, fmt.Errorf("arg (position %v) invalid, %s cannot covert to type %v", index, inputArgData[index], inputType)
-			}
-			theArgData = append(theArgData, int32(i))
-		} else if inputType == "int64" {
-			i, err := strconv.ParseInt(inputArgData[index], 10, 64)
-			if err != nil {
-				return nil, nil, fmt.Errorf("arg (position %v) invalid, %s cannot covert to type %v", index, inputArgData[index], inputType)
-			}
-			theArgData = append(theArgData, int64(i))
-		} else if inputType == "uint8" {
-			i, err := strconv.ParseInt(inputArgData[index], 10, 64)
-			if err != nil {
-				return nil, nil, fmt.Errorf("arg (position %v) invalid, %s cannot covert to type %v", index, inputArgData[index], inputType)
-			}
-			theArgData = append(theArgData, uint8(i))
-		} else if inputType == "uint16" {
-			i, err := strconv.ParseInt(inputArgData[index], 10, 64)
-			if err != nil {
-				return nil, nil, fmt.Errorf("arg (position %v) invalid, %s cannot covert to type %v", index, inputArgData[index], inputType)
-			}
-			theArgData = append(theArgData, uint16(i))
-		} else if inputType == "uint32" {
-			i, err := strconv.ParseInt(inputArgData[index], 10, 64)
-			if err != nil {
-				return nil, nil, fmt.Errorf("arg (position %v) invalid, %s cannot covert to type %v", index, inputArgData[index], inputType)
-			}
-			theArgData = append(theArgData, uint32(i))
-		} else if inputType == "uint64" {
-			i, err := strconv.ParseUint(inputArgData[index], 10, 64)
-			if err != nil {
-				return nil, nil, fmt.Errorf("arg (position %v) invalid, %s cannot covert to type %v", index, inputArgData[index], inputType)
-			}
-			theArgData = append(theArgData, uint64(i))
-		} else if strings.Contains(inputType, "int") { // other cases: int24, int40, ..., int256, uint24, uint40, ..., uint256, etc
-			argData := inputArgData[index]
-
-			if !isValidInt(inputType) {
-				return nil, nil, fmt.Errorf("type %v not a valid type", inputType)
-			}
-
-			if (inputType == "uint256" || inputType == "uint") && strings.Contains(argData, "e") {
-				// example:
-				// convert 1e18 to 1000000000000000000
-				argData, err = scientificNotation2Decimal(argData)
-				checkErr(err)
-			}
-
-			n := new(big.Int)
-			n, ok := n.SetString(argData, 10)
-			if !ok {
-				return nil, nil, fmt.Errorf("arg (position %v) invalid, %s cannot covert to type %v", index, argData, inputType)
-			}
-			theArgData = append(theArgData, n)
-
-		} else if inputType == "bool" {
-			if strings.EqualFold(inputArgData[index], "true") {
-				theArgData = append(theArgData, true)
-			} else if strings.EqualFold(inputArgData[index], "false") {
-				theArgData = append(theArgData, false)
-			} else {
-				return nil, nil, fmt.Errorf("arg (position %v) invalid, %s cannot covert to type %v", index, inputArgData[index], inputType)
-			}
-		} else if inputType == "address" {
-			theArgData = append(theArgData, common.HexToAddress(inputArgData[index]))
-		} else if inputType == "bytes" {
-			var inputHex = inputArgData[index]
-			if strings.HasPrefix(inputArgData[index], "0x") {
-				inputHex = inputArgData[index][2:]
-			}
-			decoded, err := hex.DecodeString(inputHex)
-			if err != nil {
-				return nil, nil, fmt.Errorf("arg (position %v) invalid, %s cannot covert to type %v", index, inputArgData[index], inputType)
-			}
-			theArgData = append(theArgData, decoded)
-		} else if strings.Contains(inputType, "bytes") { // bytes1, bytes2, ..., bytes32
-			var inputHex = inputArgData[index]
-			if strings.HasPrefix(inputArgData[index], "0x") {
-				inputHex = inputArgData[index][2:]
-			}
-			decoded, err := hex.DecodeString(inputHex)
-			if err != nil {
-				return nil, nil, fmt.Errorf("arg (position %v) invalid, %s cannot covert to type %v", index, inputArgData[index], inputType)
-			}
-			if inputType == "bytes1" {
-				var data [1]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes2" {
-				var data [2]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes3" {
-				var data [3]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes4" {
-				var data [4]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes5" {
-				var data [5]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes6" {
-				var data [6]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes7" {
-				var data [7]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes8" {
-				var data [8]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes9" {
-				var data [9]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes10" {
-				var data [10]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes11" {
-				var data [11]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes12" {
-				var data [12]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes13" {
-				var data [13]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes14" {
-				var data [14]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes15" {
-				var data [15]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes16" {
-				var data [16]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes17" {
-				var data [17]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes18" {
-				var data [18]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes19" {
-				var data [19]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes20" {
-				var data [20]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes21" {
-				var data [21]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes22" {
-				var data [22]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes23" {
-				var data [23]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes24" {
-				var data [24]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes25" {
-				var data [25]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes26" {
-				var data [26]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes27" {
-				var data [27]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes28" {
-				var data [28]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes29" {
-				var data [29]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes30" {
-				var data [30]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes31" {
-				var data [31]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else if inputType == "bytes32" {
-				var data [32]byte
-				copy(data[:], decoded)
-				theArgData = append(theArgData, data)
-			} else {
-				return nil, nil, fmt.Errorf("type %v not implemented currently", inputType)
-			}
+			theArgData = append(theArgData, tupleData)
 		} else {
-			return nil, nil, fmt.Errorf("type %v not implemented currently", inputType)
+			data, err := buildConcreteData(inputType, inputArgData[index])
+			if err != nil {
+				return nil, nil, fmt.Errorf("buildConcreteData fail: %w", err)
+			}
+			theArgData = append(theArgData, data)
 		}
 	}
 
 	return theTypes, theArgData, nil
 }
 
-// `["abc", "xyz"]`     ----> abc, xyz
-// `[abc, xyz]`         ----> abc, xyz
-// `["a(a,a)", "abcd"]` ----> a(a,a), abcd
-// `abc, xyz`           ----> abc, xyz
-func parseArrayData(input string) ([]string, error) {
-	input = strings.TrimSpace(input)
-	input = strings.TrimLeft(input, "[")
-	input = strings.TrimRight(input, "]")
-	r := csv.NewReader(strings.NewReader(input))
-	r.LazyQuotes = true
-	r.TrimLeadingSpace = true
-	records, err := r.Read()
-	if err != nil {
-		if err == io.EOF {
-			return []string{}, nil
+func buildConcreteData(inputType string, data string) (any, error) {
+	if inputType == "string" {
+		return data, nil
+	} else if inputType == "int8" {
+		i, err := strconv.ParseInt(data, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("%s cannot covert to type %v", data, inputType)
+		}
+		return int8(i), nil
+	} else if inputType == "int16" {
+		i, err := strconv.ParseInt(data, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("%s cannot covert to type %v", data, inputType)
+		}
+		return int16(i), nil
+	} else if inputType == "int32" {
+		i, err := strconv.ParseInt(data, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("%s cannot covert to type %v", data, inputType)
+		}
+		return int32(i), nil
+	} else if inputType == "int64" {
+		i, err := strconv.ParseInt(data, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("%s cannot covert to type %v", data, inputType)
+		}
+		return int64(i), nil
+	} else if inputType == "uint8" {
+		i, err := strconv.ParseInt(data, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("%s cannot covert to type %v", data, inputType)
+		}
+		return uint8(i), nil
+	} else if inputType == "uint16" {
+		i, err := strconv.ParseInt(data, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("%s cannot covert to type %v", data, inputType)
+		}
+		return uint16(i), nil
+	} else if inputType == "uint32" {
+		i, err := strconv.ParseInt(data, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("%s cannot covert to type %v", data, inputType)
+		}
+		return uint32(i), nil
+	} else if inputType == "uint64" {
+		i, err := strconv.ParseUint(data, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("%s cannot covert to type %v", data, inputType)
+		}
+		return uint64(i), nil
+	} else if strings.Contains(inputType, "int") { // other cases: int24, int40, ..., int256, uint24, uint40, ..., uint256, etc
+		argData := data
+
+		if !isValidInt(inputType) {
+			return nil, fmt.Errorf("type %v not a valid type", inputType)
+		}
+
+		if (inputType == "uint256" || inputType == "uint") && strings.Contains(argData, "e") {
+			// example:
+			// convert 1e18 to 1000000000000000000
+			var err error
+			argData, err = scientificNotation2Decimal(argData)
+			checkErr(err)
+		}
+
+		n := new(big.Int)
+		n, ok := n.SetString(argData, 10)
+		if !ok {
+			return nil, fmt.Errorf("%s cannot covert to type %v", argData, inputType)
+		}
+		return n, nil
+	} else if inputType == "bool" {
+		if strings.EqualFold(data, "true") {
+			return true, nil
+		} else if strings.EqualFold(data, "false") {
+			return false, nil
 		} else {
-			println(err.Error())
+			return nil, fmt.Errorf("%s cannot covert to type %v", data, inputType)
+		}
+	} else if inputType == "address" {
+		return common.HexToAddress(data), nil
+	} else if inputType == "bytes" {
+		var inputHex = data
+		if strings.HasPrefix(data, "0x") {
+			inputHex = data[2:]
+		}
+		decoded, err := hex.DecodeString(inputHex)
+		if err != nil {
+			return nil, fmt.Errorf("%s cannot covert to type %v", data, inputType)
+		}
+		return decoded, nil
+	} else if strings.Contains(inputType, "bytes") { // bytes1, bytes2, ..., bytes32
+		var inputHex = data
+		if strings.HasPrefix(data, "0x") {
+			inputHex = data[2:]
+		}
+		decoded, err := hex.DecodeString(inputHex)
+		if err != nil {
+			return nil, fmt.Errorf("%s cannot covert to type %v", data, inputType)
+		}
+		if inputType == "bytes1" {
+			var data [1]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes2" {
+			var data [2]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes3" {
+			var data [3]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes4" {
+			var data [4]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes5" {
+			var data [5]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes6" {
+			var data [6]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes7" {
+			var data [7]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes8" {
+			var data [8]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes9" {
+			var data [9]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes10" {
+			var data [10]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes11" {
+			var data [11]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes12" {
+			var data [12]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes13" {
+			var data [13]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes14" {
+			var data [14]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes15" {
+			var data [15]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes16" {
+			var data [16]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes17" {
+			var data [17]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes18" {
+			var data [18]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes19" {
+			var data [19]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes20" {
+			var data [20]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes21" {
+			var data [21]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes22" {
+			var data [22]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes23" {
+			var data [23]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes24" {
+			var data [24]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes25" {
+			var data [25]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes26" {
+			var data [26]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes27" {
+			var data [27]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes28" {
+			var data [28]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes29" {
+			var data [29]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes30" {
+			var data [30]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes31" {
+			var data [31]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else if inputType == "bytes32" {
+			var data [32]byte
+			copy(data[:], decoded)
+			return data, nil
+		} else {
+			return nil, fmt.Errorf("type %v not implemented currently", inputType)
+		}
+	} else {
+		return nil, fmt.Errorf("type %v not implemented currently", inputType)
+	}
+}
+
+// input: `("abc", "xyz")`     ----> abc, xyz
+// input: `["abc", "xyz"]`     ----> abc, xyz
+// `[(4,true), (5,false)]`  ----2 elements----> (4,true), (5,false)
+// `[[12,13], [14,15]]`  ----2 elements----> [12,13], [14,15]
+func splitData(input string) []string {
+	input = strings.TrimSpace(input)
+	if strings.HasPrefix(input, "(") && strings.HasSuffix(input, ")") {
+		input = input[1 : len(input)-1] // remove prefix "(" and suffix ")"
+	}
+	if strings.HasPrefix(input, "[") && strings.HasSuffix(input, "]") {
+		input = input[1 : len(input)-1] // remove prefix "[" and suffix "]"
+	}
+
+	var rv []string
+	var curArg string
+	var curArgFinished = false
+
+	var processingTuple = false
+	var numOfOpenLeftPar = 0
+
+	var processingSubArray = false
+	var numOfOpenLeftBrackets = 0
+	for _, ch := range input {
+		if ch == ',' {
+			if processingTuple || processingSubArray {
+				curArg = curArg + "," // keep ',' while process tuple or sub array
+			} else {
+				curArgFinished = true // end previous arg, discard ','
+			}
+		} else {
+			curArgFinished = false
+			curArg = curArg + string(ch)
+
+			if ch == '(' {
+				numOfOpenLeftPar = numOfOpenLeftPar + 1
+				processingTuple = true
+			} else if ch == ')' {
+				numOfOpenLeftPar = numOfOpenLeftPar - 1
+				if numOfOpenLeftPar == 0 { // all nested tuple closed
+					processingTuple = false // close the out tuple
+				}
+			}
+
+			if ch == '[' {
+				numOfOpenLeftBrackets = numOfOpenLeftBrackets + 1
+				processingSubArray = true
+			} else if ch == ']' {
+				numOfOpenLeftBrackets = numOfOpenLeftBrackets - 1
+				if numOfOpenLeftBrackets == 0 { // all nested tuple closed
+					processingSubArray = false // close the out tuple
+				}
+			}
+		}
+
+		if curArgFinished {
+			rv = append(rv, strings.TrimSpace(curArg))
+			curArg = ""
 		}
 	}
-	return records, nil
+	rv = append(rv, strings.TrimSpace(curArg)) // append the last arg
+
+	return rv
 }
 
 // uint -> uint256
@@ -1011,4 +1170,31 @@ func scientificNotation2Decimal(input string) (string, error) {
 
 	log.Printf("convert %v to %v", input, result)
 	return result, nil
+}
+
+// BuildTupleArgData build tuple data accepted by abi Pack
+// An example:
+// typ: abi.NewType("tuple", "", []abi.ArgumentMarshaling{{Name: "Field0", Type: "uint256"}, {Name: "Field1", Type: "bool"}})
+// data: ["15", "true"]
+// return: A dynamically created struct object: { Field0: big.NewInt("15"), Field1: true }
+func BuildTupleArgData(typ abi.Type, data []string) (any, error) {
+	if typ.T != abi.TupleTy {
+		return nil, fmt.Errorf("bad type, only accept tuple type")
+	}
+
+	if len(typ.TupleRawNames) != len(data) {
+		return nil, fmt.Errorf("type and data length mismatch, type length %d, data length %d", len(typ.TupleRawNames), len(data))
+	}
+
+	v := reflect.New(typ.TupleType).Elem()
+	elemTypes := typ.TupleElems
+	for index, name := range typ.TupleRawNames {
+		d, err := buildConcreteData(elemTypes[index].String(), data[index])
+		if err != nil {
+			return nil, fmt.Errorf("buildConcreteData failed: %w", err)
+		}
+		v.FieldByName(name).Set(reflect.ValueOf(d))
+	}
+
+	return v.Addr().Interface(), nil
 }
