@@ -78,9 +78,14 @@ func printContractReturnData(funcDefinition string, output []byte) {
 	returnArgs, err := buildReturnArgs(funcDefinition)
 	checkErr(err)
 
+	log.Printf("Output raw data\n%v\n", hex.EncodeToString(output))
+	// Pretty print output raw data
+	num := len(output) / 32
+	for i := 0; i <= num-1; i++ {
+		fmt.Printf("[%d]:  %v\n", i, hexutil.Encode(output[32*i:32*(i+1)]))
+	}
 	if len(returnArgs) == 0 {
-		// Return type of function not specified
-		fmt.Printf("Return type of function not specified, print raw data\n%v\n", hex.EncodeToString(output))
+		// Return if type of function not specified
 		return
 	}
 
@@ -136,7 +141,7 @@ func buildReturnArgs(funcDefinition string) (abi.Arguments, error) {
 	if leftParenthesisLoc < 0 {
 		return nil, fmt.Errorf("char ) is not found after keyword returns")
 	}
-	rightParenthesisLoc := strings.Index(partAfterReturns, ")")
+	rightParenthesisLoc := strings.LastIndex(partAfterReturns, ")")
 	if rightParenthesisLoc < 0 {
 		return nil, fmt.Errorf("char ) is not found after keyword returns")
 	}
@@ -144,30 +149,40 @@ func buildReturnArgs(funcDefinition string) (abi.Arguments, error) {
 	var theReturnTypes abi.Arguments
 
 	returnPart := partAfterReturns[leftParenthesisLoc+1 : rightParenthesisLoc]
-	returnList := strings.Split(returnPart, ",")
+	returnList := splitData(returnPart)
 	for index, returnElem := range returnList {
-		fields := strings.Fields(returnElem)
-		if len(fields) == 0 {
-			return nil, fmt.Errorf("func definition `%v` invalid, type missing in returns", funcDefinition)
-		}
-
-		typ, err := abi.NewType(typeNormalize(fields[0]), "", nil)
-		if err != nil {
-			return nil, fmt.Errorf("abi.NewType fail: %w", err)
-		}
-
 		theReturnName := "ret" + strconv.FormatInt(int64(index), 10) // default name ret0, ret1, etc
-		if len(fields) > 1 {
-			if fields[1] == "memory" || fields[1] == "calldata" {
-				// skip keyword "memory" and "calldata"
-				if len(fields) > 2 {
-					theReturnName = fields[2]
-				}
-			} else {
-				theReturnName = fields[1]
+
+		if strings.HasSuffix(returnElem, "]") { // array
+			typ, err := BuildTupleArrayType(returnElem)
+			if err != nil {
+				return nil, fmt.Errorf("BuildTupleArrayType fail: %w", err)
 			}
+			theReturnTypes = append(theReturnTypes, abi.Argument{Type: typ, Name: theReturnName})
+		} else {
+			log.Printf("returnElem = %v", returnElem)
+			fields := strings.Fields(returnElem)
+			if len(fields) == 0 {
+				return nil, fmt.Errorf("func definition `%v` invalid, type missing in returns", funcDefinition)
+			}
+
+			typ, err := abi.NewType(typeNormalize(fields[0]), "", nil)
+			if err != nil {
+				return nil, fmt.Errorf("abi.NewType fail: %w", err)
+			}
+
+			if len(fields) > 1 {
+				if fields[1] == "memory" || fields[1] == "calldata" {
+					// skip keyword "memory" and "calldata"
+					if len(fields) > 2 {
+						theReturnName = fields[2]
+					}
+				} else {
+					theReturnName = fields[1]
+				}
+			}
+			theReturnTypes = append(theReturnTypes, abi.Argument{Type: typ, Name: theReturnName})
 		}
-		theReturnTypes = append(theReturnTypes, abi.Argument{Type: typ, Name: theReturnName})
 	}
 
 	return theReturnTypes, nil

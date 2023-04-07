@@ -240,11 +240,11 @@ func buildTupleType(tupleType string) (abi.Type, error) {
 	return abi.NewType("tuple", "", components)
 }
 
-// buildTupleArrayType build tuple array abi.Type
+// BuildTupleArrayType build tuple array abi.Type
 // An example:
 // tupleType: "(uint256, bool)[5]"
 // return: abi.NewType("tuple[5]", "", []abi.ArgumentMarshaling{{Name: "Field0", Type: "uint256"}, {Name: "Field1", Type: "bool"}})
-func buildTupleArrayType(tupleType string) (abi.Type, error) {
+func BuildTupleArrayType(tupleType string) (abi.Type, error) {
 	// If tupleType is (bool,uint256)[5], then
 	// tupleTypePart1 is (bool,uint256)
 	// tupleTypePart2 is 5
@@ -284,9 +284,9 @@ func buildArgumentAndData(inputArgTypes, inputArgData []string) (abi.Arguments, 
 				return nil, nil, fmt.Errorf("buildTupleType fail: %w", err)
 			}
 		} else if isTupleArray {
-			typ, err = buildTupleArrayType(inputType)
+			typ, err = BuildTupleArrayType(inputType)
 			if err != nil {
-				return nil, nil, fmt.Errorf("buildTupleArrayType fail: %w", err)
+				return nil, nil, fmt.Errorf("BuildTupleArrayType fail: %w", err)
 			}
 		} else {
 			typ, err = abi.NewType(typeNormalize(inputType), "", nil)
@@ -304,9 +304,9 @@ func buildArgumentAndData(inputArgTypes, inputArgData []string) (abi.Arguments, 
 			arrayElementType = strings.TrimSpace(arrayElementType)
 
 			var arrayOfTypes []string
-			log.Printf("before splitData %v", inputArgData[index])
+			// log.Printf("before splitData %v", inputArgData[index])
 			arrayOfData := splitData(inputArgData[index])
-			log.Printf("after splitData %v", arrayOfData)
+			// log.Printf("after splitData %v", arrayOfData)
 			// log.Printf("input %v, arrayOfData %+v", inputArgData[index], arrayOfData)
 			for range arrayOfData {
 				arrayOfTypes = append(arrayOfTypes, typeNormalize(arrayElementType)) // `address[3]`  -> `[address, address, address]`
@@ -1182,6 +1182,7 @@ func BuildTupleArgData(typ abi.Type, data []string) (any, error) {
 		return nil, fmt.Errorf("bad type, only accept tuple type")
 	}
 
+	// log.Printf("data = %v", data)
 	if len(typ.TupleRawNames) != len(data) {
 		return nil, fmt.Errorf("type and data length mismatch, type length %d, data length %d", len(typ.TupleRawNames), len(data))
 	}
