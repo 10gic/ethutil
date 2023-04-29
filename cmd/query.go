@@ -15,15 +15,22 @@ import (
 )
 
 var queryCmdABIFile string
+var queryHexData string
 
 func init() {
 	queryCmd.Flags().StringVarP(&queryCmdABIFile, "abi-file", "", "", "the path of abi file, if this option specified, 'function definition' can be just function name")
+	queryCmd.Flags().StringVarP(&queryHexData, "hex-data", "", "", "the input hex data")
 }
 
 var queryCmd = &cobra.Command{
-	Use:   "query contract_address 'function definition' arg1 arg2 ...",
+	Use:   "query contract_address ['function definition' arg1 arg2 ...]",
 	Short: "Invokes the (constant) contract method",
-	Args:  cobra.MinimumNArgs(2),
+	Args: func(cmd *cobra.Command, args []string) error {
+		if len(queryHexData) > 0 && len(args) > 1 {
+			return fmt.Errorf("--hex-data and 'function definition' cannot be specified at the same time")
+		}
+		return nil
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		if !validationQueryCmdOpts(args) {
 			_ = cmd.Help()
@@ -34,8 +41,6 @@ var queryCmd = &cobra.Command{
 		InitGlobalClient(globalOptNodeUrl)
 
 		contractAddr := args[0]
-		funcSignature := args[1]
-		inputArgData := args[2:]
 
 		if !globalOptDryRun {
 			// don't check contract address if --dry-run specified
@@ -47,6 +52,29 @@ var queryCmd = &cobra.Command{
 				log.Fatalf("%v is NOT a contract address, can not find it from blockchain", contractAddr)
 			}
 		}
+
+		if len(queryHexData) > 0 {
+			// Case 1: user provide tx input data
+			if has0xPrefix(queryHexData) {
+				queryHexData = queryHexData[2:]
+			}
+			txInputData, err := hex.DecodeString(queryHexData)
+			checkErr(err)
+			output, err := Call(globalClient.EthClient, common.HexToAddress(contractAddr), txInputData)
+			checkErr(err)
+
+			log.Printf("Output raw data\n%v\n", hex.EncodeToString(output))
+			// Pretty print output raw data
+			num := len(output) / 32
+			for i := 0; i <= num-1; i++ {
+				fmt.Printf("[%d]:  %v\n", i, hexutil.Encode(output[32*i:32*(i+1)]))
+			}
+			return
+		}
+
+		// Case 2: construct tx input data
+		funcSignature := args[1]
+		inputArgData := args[2:]
 
 		if queryCmdABIFile != "" {
 			abiContent, err := os.ReadFile(queryCmdABIFile)

@@ -84,6 +84,10 @@ var balanceCmd = &cobra.Command{
 				return fmt.Errorf("%v is not a valid eth address", address)
 			}
 		}
+
+		if len(addresses) > 10000 {
+			return fmt.Errorf("too many addresses (%v), can not exceed 10000", len(addresses))
+		}
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
@@ -105,20 +109,42 @@ var balanceCmd = &cobra.Command{
 		var results []kv
 		var finishOutput = false
 
-		for _, addr := range addresses {
-			balance, err := globalClient.EthClient.BalanceAt(ctx, common.HexToAddress(addr), nil)
+		if isMulticallDeployed(globalClient.EthClient) {
+			balances, err := queryEthBalancesByMulticall(addresses)
 			checkErr(err)
 
-			results = append(results, kv{addr, *balance})
+			for index, balance := range balances {
+				addr := addresses[index]
 
-			// print output immediately if no sort demand
-			if balanceSortOpt == sortNo {
-				if globalOptTerseOutput {
-					fmt.Printf("%v %s\n", addr, wei2Other(bigInt2Decimal(balance), balanceUnit).String())
-				} else {
-					fmt.Printf("addr %v, balance %s %s\n", addr, wei2Other(bigInt2Decimal(balance), balanceUnit).String(), balanceUnit)
+				results = append(results, kv{addr, *balance})
+
+				// print output immediately if no sort demand
+				if balanceSortOpt == sortNo {
+					if globalOptTerseOutput {
+						fmt.Printf("%v %s\n", addr, wei2Other(bigInt2Decimal(balance), balanceUnit).String())
+					} else {
+						fmt.Printf("addr %v, balance %s %s\n", addr, wei2Other(bigInt2Decimal(balance), balanceUnit).String(), balanceUnit)
+					}
+					finishOutput = true
 				}
-				finishOutput = true
+			}
+		} else {
+			for _, addr := range addresses {
+				// check balance one by one
+				balance, err := globalClient.EthClient.BalanceAt(ctx, common.HexToAddress(addr), nil)
+				checkErr(err)
+
+				results = append(results, kv{addr, *balance})
+
+				// print output immediately if no sort demand
+				if balanceSortOpt == sortNo {
+					if globalOptTerseOutput {
+						fmt.Printf("%v %s\n", addr, wei2Other(bigInt2Decimal(balance), balanceUnit).String())
+					} else {
+						fmt.Printf("addr %v, balance %s %s\n", addr, wei2Other(bigInt2Decimal(balance), balanceUnit).String(), balanceUnit)
+					}
+					finishOutput = true
+				}
 			}
 		}
 

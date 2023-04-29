@@ -24,6 +24,8 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+var ethAddressRE = regexp.MustCompile("^(0x)?[0-9a-fA-F]{40}$")
+
 // contains returns true if array arr contains str.
 func contains(arr []string, str string) bool {
 	for _, a := range arr {
@@ -60,7 +62,6 @@ func checkErr(err error) {
 
 // isValidEthAddress returns true if v is a valid eth address.
 func isValidEthAddress(v string) bool {
-	var ethAddressRE = regexp.MustCompile("^(0x)?[0-9a-fA-F]{40}$")
 	return ethAddressRE.MatchString(v)
 }
 
