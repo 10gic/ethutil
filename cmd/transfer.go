@@ -72,9 +72,9 @@ func getGasPrice(client *ethclient.Client) (*big.Int, error) {
 }
 
 var transferCmd = &cobra.Command{
-	Use:   "transfer target-address amount",
-	Short: "Transfer amount of eth to target-address",
-	Long:  "Transfer amount of eth to target-address, special word `all` is valid amount. unit is ether, can be changed by --unit.",
+	Use:   "transfer TARGET-ADDRESS AMOUNT",
+	Short: "Transfer AMOUNT of eth to TARGET-ADDRESS",
+	Long:  "Transfer AMOUNT of eth to TARGET-ADDRESS, special word `all` is valid amount. unit is ether, can be changed by --unit.",
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
 			return fmt.Errorf("requires target-address and amount")

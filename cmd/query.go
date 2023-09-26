@@ -23,7 +23,7 @@ func init() {
 }
 
 var queryCmd = &cobra.Command{
-	Use:   "query contract_address ['function definition' arg1 arg2 ...]",
+	Use:   "query CONTRACT-ADDRESS ['function definition' arg1 arg2 ...]",
 	Short: "Invokes the (constant) contract method",
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(queryHexData) > 0 && len(args) > 1 {
@@ -146,6 +146,7 @@ func printContractReturnData(funcDefinition string, output []byte) {
 	}
 
 	// fmt.Printf("raw output:\n%s\n", hex.Dump(output))
+	return
 }
 
 func validationQueryCmdOpts(args []string) bool {

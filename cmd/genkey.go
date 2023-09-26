@@ -17,9 +17,9 @@ func init() {
 }
 
 var genkeyCmd = &cobra.Command{
-	Use:   "gen-key",
+	Use:     "gen-key",
 	Aliases: []string{"gen-private-key"},
-	Short: "Generate eth private key and its address",
+	Short:   "Generate eth private key and its address",
 	Run: func(cmd *cobra.Command, args []string) {
 		if genkeyNumOpt <= 0 {
 			_ = cmd.Help()

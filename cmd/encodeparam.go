@@ -64,9 +64,8 @@ func buildTxInputData(funcSignature string, inputArgData []string) ([]byte, erro
 	if len(funcName) > 0 {
 		funcSign := funcName + "(" + strings.Join(funcArgTypes, ",") + ")"
 		functionSelector = crypto.Keccak256([]byte(funcSign))[0:4]
-	} else {
-		// log.Printf("function name is not found, only encode arguments")
 	}
+	// if funcName is empty, only encode arguments
 
 	if len(funcArgTypes) != len(inputArgData) {
 		return nil, fmt.Errorf("invalid input, there are %v args in signature, but %v args are provided", len(funcArgTypes), len(inputArgData))
@@ -991,6 +990,12 @@ type AbiJSONData struct {
 	ABI []AbiData `json:"abi"`
 }
 
+type ErrFuncNotFound struct {
+	FuncName string
+}
+
+func (e ErrFuncNotFound) Error() string { return fmt.Sprintf("function %s not found", e.FuncName) }
+
 func extractFuncDefinition(abi string, funcName string) (string, error) {
 	// log.Printf("abi = %s\nfuncName = %s", abi, funcName)
 	abi = strings.TrimSpace(abi)
@@ -1060,7 +1065,9 @@ func extractFuncDefinition(abi string, funcName string) (string, error) {
 	}
 
 	if !foundFunc {
-		return "", fmt.Errorf("function %v not found in ABI", funcName)
+		return "", &ErrFuncNotFound{
+			FuncName: funcName,
+		}
 	}
 
 	// Example of ret: `f1(uint256[], address[]) returns (uint256)`

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"testing"
 )
 
@@ -20,11 +21,16 @@ func TestPersonalSign(t *testing.T) {
 			input2: "0x4f66baf5a1c3a91b6cf8173cdb60d12496e1f572cee6f9f86bc507d87a9790d7",
 			want:   "0xa2999d1ac51dece28dbfd6a1aa417fa48a3f9107f5fe9cdf5578859fb65763b52faf34dfb7f86069b1da162145b32949545c7cafef0017844bd3e7191d2236ae1c",
 		},
+		{
+			input1: "hello eth",
+			input2: "0x4f66baf5a1c3a91b6cf8173cdb60d12496e1f572cee6f9f86bc507d87a9790d7",
+			want:   "0xa2999d1ac51dece28dbfd6a1aa417fa48a3f9107f5fe9cdf5578859fb65763b52faf34dfb7f86069b1da162145b32949545c7cafef0017844bd3e7191d2236ae1c",
+		},
 	}
 
 	for i, tc := range tests {
-		got, _ := personalSign(tc.input1, buildPrivateKeyFromHex(tc.input2))
-		if tc.want != got {
+		got, _ := personalSign([]byte(tc.input1), buildPrivateKeyFromHex(tc.input2))
+		if tc.want != hexutil.Encode(got) {
 			t.Fatalf("test %d: expected: %v, got: %v", i+1, tc.want, got)
 		}
 	}

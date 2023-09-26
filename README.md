@@ -200,13 +200,13 @@ Usage:
 
 Available Commands:
   balance               Check eth balance for address
-  transfer              Transfer amount of eth to target-address
+  transfer              Transfer AMOUNT of eth to TARGET-ADDRESS
   call                  Invokes the (paid) contract method
   query                 Invokes the (constant) contract method
   deploy                Deploy contract
   deploy-erc20          Deploy an ERC20 token
-  4byte                 Get the function signatures for the given selector from https://openchain.xyz/signatures
   drop-tx               Drop pending tx for address
+  4byte                 Get the function signatures for the given selector from https://openchain.xyz/signatures
   encode-param          Encode input arguments, it's useful when you call contract's method manually
   gen-key               Generate eth private key and its address
   dump-address          Dump address from private key or mnemonic
@@ -216,8 +216,11 @@ Available Commands:
   erc20                 Call ERC20 contract, a helper for subcommand call/query
   keccak                Compute keccak hash
   personal-sign         Create EIP191 personal sign
+  eip712-sign           Create EIP712 sign
+  aa-simple-account     AA (EIP4337) simple account, owned by an EOA account
   download-src          Download source code of contract from block explorer platform, eg. etherscan.
   help                  Help about any command
+  completion            Generate the autocompletion script for the specified shell
 
 Flags:
       --dry-run                           do not broadcast tx
@@ -226,7 +229,7 @@ Flags:
   -h, --help                              help for ethutil
       --max-fee-per-gas string            maximum fee per gas they are willing to pay total, unit is gwei. see eip1559
       --max-priority-fee-per-gas string   maximum fee per gas they are willing to give to miners, unit is gwei. see eip1559
-      --node string                       mainnet | goerli | sepolia | sokol | bsc | heco, the node type (default "goerli")
+      --node string                       mainnet | goerli | sepolia | sokol | bsc, the node type (default "goerli")
       --node-url string                   the target connection node url, if this option specified, the --node option is ignored
       --nonce int                         the nonce, -1 means check online (default -1)
   -k, --private-key string                the private key, eth would be send from this account

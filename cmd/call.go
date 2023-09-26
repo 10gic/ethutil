@@ -21,7 +21,7 @@ func init() {
 }
 
 var callCmd = &cobra.Command{
-	Use:   "call contract-address 'function signature' arg1 arg2 ...",
+	Use:   "call CONTRACT-ADDRESS 'function signature' arg1 arg2 ...",
 	Short: "Invokes the (paid) contract method",
 	Args:  cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {

@@ -9,8 +9,8 @@ import (
 )
 
 const MulticallContractAddr = "0xcA11bde05977b3631167028862bE2a173976CA11" // See https://github.com/mds1/multicall
-const MulticallFuncSignGetEthBalance = "4d2301cc" // 4 bytes func signature of `getEthBalance(address)`
-const MulticallFuncSignAggregate = "252dba42" // 4 bytes func signature of `aggregate((address,bytes)[])`
+const MulticallFuncSignGetEthBalance = "4d2301cc"                          // 4 bytes func signature of `getEthBalance(address)`
+const MulticallFuncSignAggregate = "252dba42"                              // 4 bytes func signature of `aggregate((address,bytes)[])`
 
 func isMulticallDeployed(client *ethclient.Client) bool {
 	deployed, err := isContractAddress(client, common.HexToAddress(MulticallContractAddr))

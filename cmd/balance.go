@@ -49,7 +49,7 @@ func validationBalanceCmdOpts() bool {
 var addresses []string
 
 var balanceCmd = &cobra.Command{
-	Use:   "balance [eth-address1 eth-address2 ...]",
+	Use:   "balance ETH-ADDRESS1 [ETH-ADDRESS2 ...]",
 	Short: "Check eth balance for address",
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 && len(balanceInputFile) == 0 {
