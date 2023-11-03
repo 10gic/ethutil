@@ -257,15 +257,20 @@ func GenRawTx(signedTx *types.Transaction) (string, error) {
 	return hexutil.Encode(data), nil
 }
 
-// SendRawTransaction broadcast signed tx and return tx returned by rpc node
-func SendRawTransaction(rpcClient *rpc.Client, signedTx *types.Transaction) (*common.Hash, error) {
+// SendSignedTx broadcast signed tx and return tx returned by rpc node
+func SendSignedTx(rpcClient *rpc.Client, signedTx *types.Transaction) (*common.Hash, error) {
 	rawTx, err := GenRawTx(signedTx)
 	if err != nil {
 		return nil, err
 	}
 
+	return SendRawTransaction(rpcClient, rawTx)
+}
+
+// SendRawTransaction broadcast signedTxHexStr and return tx returned by rpc node
+func SendRawTransaction(rpcClient *rpc.Client, signedTxHexStr string) (*common.Hash, error) {
 	var result hexutil.Bytes
-	err = rpcClient.CallContext(context.Background(), &result, "eth_sendRawTransaction", rawTx)
+	err := rpcClient.CallContext(context.Background(), &result, "eth_sendRawTransaction", signedTxHexStr)
 	if err != nil {
 		return nil, err
 	}
@@ -274,23 +279,31 @@ func SendRawTransaction(rpcClient *rpc.Client, signedTx *types.Transaction) (*co
 	return &hash, nil
 }
 
-// Transact invokes the (paid) contract method.
-func Transact(rpcClient *rpc.Client, client *ethclient.Client, privateKey *ecdsa.PrivateKey, toAddress *common.Address, amount *big.Int, gasPrice *big.Int, data []byte) (string, error) {
-	fromAddress := extractAddressFromPrivateKey(privateKey)
-
+// BuildTx builds transaction
+func BuildTx(client *ethclient.Client, privateKey *ecdsa.PrivateKey, fromAddress, /* fromAddress is only needed when privateKey is nil */
+	toAddress *common.Address, amount, gasPrice *big.Int, data []byte,
+) (*types.Transaction, error) {
 	var nonce uint64
 	var err error
 	if globalOptNonce < 0 {
-		nonce, err = client.PendingNonceAt(context.Background(), fromAddress)
+
+		var account common.Address
+		if privateKey != nil {
+			account = extractAddressFromPrivateKey(privateKey)
+		} else {
+			account = *fromAddress
+		}
+
+		nonce, err = client.PendingNonceAt(context.Background(), account)
 		if err != nil {
-			return "", fmt.Errorf("PendingNonceAt fail: %w", err)
+			return nil, fmt.Errorf("PendingNonceAt fail: %w", err)
 		}
 	} else {
 		nonce = uint64(globalOptNonce)
 	}
 
 	gasLimit := globalOptGasLimit
-	if gasLimit == 0 { // if user not specified
+	if gasLimit == 0 { // if not specified
 		gasLimit = uint64(gasUsedByTransferEth)
 
 		if toAddress == nil {
@@ -298,7 +311,7 @@ func Transact(rpcClient *rpc.Client, client *ethclient.Client, privateKey *ecdsa
 		} else {
 			isContract, err := isContractAddress(client, *toAddress)
 			if err != nil {
-				return "", fmt.Errorf("isContractAddress fail: %w", err)
+				return nil, fmt.Errorf("isContractAddress fail: %w", err)
 			}
 			if isContract { // gasUsedByTransferEth may be not enough if send to contract
 				gasLimit = 2000000
@@ -307,12 +320,6 @@ func Transact(rpcClient *rpc.Client, client *ethclient.Client, privateKey *ecdsa
 				gasLimit = 2000000
 			}
 		}
-	}
-
-	// if not specified
-	if gasPrice == nil {
-		gasPrice, err = getGasPrice(globalClient.EthClient)
-		checkErr(err)
 	}
 
 	var tx *types.Transaction
@@ -324,7 +331,7 @@ func Transact(rpcClient *rpc.Client, client *ethclient.Client, privateKey *ecdsa
 		if globalOptMaxPriorityFeePerGas == "" || globalOptMaxFeePerGas == "" {
 			maxFeePerGasEstimate, maxPriorityFeePerGasEstimate, err = getEIP1559GasPriceByFeeHistory(client)
 			if err != nil {
-				return "", fmt.Errorf("getEIP1559GasPriceByFeeHistory fail: %w", err)
+				return nil, fmt.Errorf("getEIP1559GasPriceByFeeHistory fail: %w", err)
 			}
 		}
 
@@ -360,6 +367,12 @@ func Transact(rpcClient *rpc.Client, client *ethclient.Client, privateKey *ecdsa
 			Data:      data,
 		})
 	} else {
+		// if not specified
+		if gasPrice == nil {
+			gasPrice, err = getGasPrice(globalClient.EthClient)
+			checkErr(err)
+		}
+
 		tx = types.NewTx(&types.LegacyTx{
 			Nonce:    nonce,
 			To:       toAddress, // nil means contract creation
@@ -370,18 +383,62 @@ func Transact(rpcClient *rpc.Client, client *ethclient.Client, privateKey *ecdsa
 		})
 	}
 
-	chainID, err := client.NetworkID(context.Background())
+	return tx, err
+}
+
+// BuildSignedTx builds signed transaction
+func BuildSignedTx(
+	client *ethclient.Client, privateKey *ecdsa.PrivateKey, fromAddress, /* fromAddress is only needed when privateKey is nil */
+	toAddress *common.Address, amount, gasPrice *big.Int, data []byte, sigData []byte,
+) (*types.Transaction, error) {
+	tx, err := BuildTx(client, privateKey, fromAddress, toAddress, amount, gasPrice, data)
 	if err != nil {
-		return "", fmt.Errorf("NetworkID fail: %w", err)
+		return nil, fmt.Errorf("BuildTx fail: %w", err)
 	}
 
-	signedTx, err := types.SignTx(tx, types.NewLondonSigner(chainID), privateKey)
+	chainID, err := client.NetworkID(context.Background())
 	if err != nil {
-		return "", fmt.Errorf("SignTx fail: %w", err)
+		return nil, fmt.Errorf("NetworkID fail: %w", err)
+	}
+
+	signer := types.NewLondonSigner(chainID)
+
+	preHash := signer.Hash(tx)
+	if globalOptShowPreHash {
+		fmt.Printf("hash before ecdsa sign (hex) = %x\n", preHash.Bytes())
+	}
+
+	// If sigData is not provided, signs the transaction using the private key
+	if len(sigData) == 0 {
+		sigData, err = crypto.Sign(preHash[:], privateKey)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// attach sigData to tx
+	signedTx, err := tx.WithSignature(signer, sigData)
+	if err != nil {
+		return nil, fmt.Errorf("WithSignature fail: %w", err)
+	}
+
+	return signedTx, nil
+}
+
+// Transact invokes the (paid) contract method.
+func Transact(rpcClient *rpc.Client, client *ethclient.Client, privateKey *ecdsa.PrivateKey, toAddress *common.Address, amount *big.Int, gasPrice *big.Int, data []byte) (string, error) {
+	fromAddress := extractAddressFromPrivateKey(privateKey)
+
+	signedTx, err := BuildSignedTx(client, privateKey, &fromAddress, toAddress, amount, gasPrice, data, nil)
+	if err != nil {
+		return "", fmt.Errorf("BuildSignedTx fail: %w", err)
 	}
 
 	if globalOptShowRawTx {
-		rawTx, _ := GenRawTx(signedTx)
+		rawTx, err := GenRawTx(signedTx)
+		if err != nil {
+			return "", fmt.Errorf("GenRawTx fail: %w", err)
+		}
 		log.Printf("raw tx = %v", rawTx)
 	}
 
@@ -390,7 +447,7 @@ func Transact(rpcClient *rpc.Client, client *ethclient.Client, privateKey *ecdsa
 		msg := ethereum.CallMsg{
 			From:     fromAddress,
 			To:       toAddress,
-			Gas:      gasLimit,
+			Gas:      signedTx.Gas(),
 			GasPrice: gasPrice,
 			Value:    amount,
 			Data:     data,
@@ -407,9 +464,9 @@ func Transact(rpcClient *rpc.Client, client *ethclient.Client, privateKey *ecdsa
 		return signedTx.Hash().String(), nil
 	}
 
-	rpcReturnTx, err := SendRawTransaction(rpcClient, signedTx)
+	rpcReturnTx, err := SendSignedTx(rpcClient, signedTx)
 	if err != nil {
-		return "", fmt.Errorf("SendRawTransaction fail: %w", err)
+		return "", fmt.Errorf("SendSignedTx fail: %w", err)
 	}
 
 	if signedTx.Hash() != *rpcReturnTx {
@@ -440,7 +497,7 @@ func Transact(rpcClient *rpc.Client, client *ethclient.Client, privateKey *ecdsa
 	}
 
 	if toAddress == nil {
-		log.Printf("the new contract deployed at %v", crypto.CreateAddress(fromAddress, nonce))
+		log.Printf("the new contract deployed at %v", crypto.CreateAddress(fromAddress, signedTx.Nonce()))
 	}
 
 	return rpcReturnTx.String(), nil

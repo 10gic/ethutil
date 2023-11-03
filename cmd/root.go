@@ -21,6 +21,7 @@ var (
 	globalOptPrivateKey           string
 	globalOptTerseOutput          bool
 	globalOptDryRun               bool
+	globalOptShowPreHash	      bool
 	globalOptShowRawTx            bool
 	globalOptShowInputData        bool
 	globalOptShowEstimateGas      bool
@@ -101,10 +102,11 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&globalOptPrivateKey, "private-key", "k", "", "the private key, eth would be send from this account")
 	rootCmd.PersistentFlags().BoolVarP(&globalOptTerseOutput, "terse", "", false, "produce terse output")
 	rootCmd.PersistentFlags().BoolVarP(&globalOptDryRun, "dry-run", "", false, "do not broadcast tx")
+	rootCmd.PersistentFlags().BoolVarP(&globalOptShowPreHash, "show-pre-hash", "", false, "print pre hash, the input of ecdsa sign")
 	rootCmd.PersistentFlags().BoolVarP(&globalOptShowRawTx, "show-raw-tx", "", false, "print raw signed tx")
 	rootCmd.PersistentFlags().BoolVarP(&globalOptShowInputData, "show-input-data", "", false, "print input data of tx")
 	rootCmd.PersistentFlags().BoolVarP(&globalOptShowEstimateGas, "show-estimate-gas", "", false, "print estimate gas of tx")
-	rootCmd.PersistentFlags().StringVarP(&globalOptTxType, "tx-type", "", "eip155", "eip155 | eip1559, the type of tx your want to send")
+	rootCmd.PersistentFlags().StringVarP(&globalOptTxType, "tx-type", "", "eip1559", "eip155 | eip1559, the type of tx your want to send")
 
 	rootCmd.AddCommand(balanceCmd)
 	rootCmd.AddCommand(transferCmd)
@@ -118,6 +120,8 @@ func init() {
 	rootCmd.AddCommand(genkeyCmd)
 	rootCmd.AddCommand(dumpAddrCmd)
 	rootCmd.AddCommand(computeContractAddrCmd)
+	rootCmd.AddCommand(buildRawTxCmd)
+	rootCmd.AddCommand(broadcastTxCmd)
 	rootCmd.AddCommand(decodeTxCmd)
 	rootCmd.AddCommand(getCodeCmd)
 	rootCmd.AddCommand(erc20Cmd)

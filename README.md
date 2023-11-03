@@ -135,6 +135,17 @@ init code 0x00
 contract address 0x4D1A2e2bB4F88F0250f26Ffff098B0b30B26BF38
 ```
 
+## Build Raw Transaction
+```shell
+$ ethutil build-raw-tx 0x356EC6F0b43bdEB18C291D5e629c1585c3c0BA73 0x7cdF8bA6cf3599a8892Cc0e7050419d40d03c829 1 --private-key 0x4a7a7070d616c70ca7caa5e34dfa944f983d530be4831e6e0086a781a679c601
+signed raw tx (can be used by rpc eth_sendRawTransaction) = 0x02f866058082076f820778825208947cdf8ba6cf3599a8892cc0e7050419d40d03c8290180c001a0d2f1549d9d16b2cdf9d617011dbfc2a9394dccd21bff307c89408191c55ae811a07bf86a7a65beb324ddd0cdb5c7303d2f84b3003b8e918234173982e34f13eff7
+```
+
+## Broadcast Transaction
+```shell
+$ ethutil broadcast-tx 0x02f866058082076f820778825208947cdf8ba6cf3599a8892cc0e7050419d40d03c8290180c001a0d2f1549d9d16b2cdf9d617011dbfc2a9394dccd21bff307c89408191c55ae811a07bf86a7a65beb324ddd0cdb5c7303d2f84b3003b8e918234173982e34f13eff7
+```
+
 ## Decode Raw Transaction
 ```shell
 $ ethutil decode-tx 0xf86c808504e3b2920082520894428cf082d321d435ff0e1f8a994e01f976f19c118809b5552f5abade008026a00a27decf27241dca4e5d82bd5b7c1fbcc3f09c35a2a05cb967f2983d148ad6aba0596e9baa40ab157f5b1b0d66746472550ba9000d4154e3faa43ccce00b030452
@@ -211,6 +222,8 @@ Available Commands:
   gen-key               Generate eth private key and its address
   dump-address          Dump address from private key or mnemonic
   compute-contract-addr Compute contract address before deployment
+  build-raw-tx          Build raw transaction, the output can be used by rpc eth_sendRawTransaction
+  broadcast-tx          Broadcast tx by rpc eth_sendRawTransaction
   decode-tx             Decode raw transaction
   code                  Get runtime bytecode of a contract on the blockchain
   erc20                 Call ERC20 contract, a helper for subcommand call/query
@@ -235,9 +248,10 @@ Flags:
   -k, --private-key string                the private key, eth would be send from this account
       --show-estimate-gas                 print estimate gas of tx
       --show-input-data                   print input data of tx
+      --show-pre-hash                     print pre hash, the input of ecdsa sign
       --show-raw-tx                       print raw signed tx
       --terse                             produce terse output
-      --tx-type string                    eip155 | eip1559, the type of tx your want to send (default "eip155")
+      --tx-type string                    eip155 | eip1559, the type of tx your want to send (default "eip1559")
 
 Use "ethutil [command] --help" for more information about a command.
 ```
