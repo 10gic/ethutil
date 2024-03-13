@@ -54,22 +54,19 @@ const txTypeEip155 = "eip155"
 const txTypeEip1559 = "eip1559"
 
 const nodeMainnet = "mainnet"
-const nodeGoerli = "goerli"
 const nodeSepolia = "sepolia"
 const nodeSokol = "sokol"
 const nodeBsc = "bsc"
 
 var nodeUrlMap = map[string]string{
 	nodeMainnet: "wss://mainnet.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472", // please replace infura project id
-	nodeGoerli:  "wss://goerli.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472",  // please replace infura project id
-	nodeSepolia: "wss://sepolia.infura.io/v3/21a9f5ba4bce425795cac796a66d7472",    // please replace infura project id
+	nodeSepolia: "wss://sepolia.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472",    // please replace infura project id
 	nodeSokol:   "https://sokol.poa.network",
 	nodeBsc:     "https://bsc-dataseed1.binance.org",
 }
 
 var nodeTxExplorerUrlMap = map[string]string{
 	nodeMainnet: "https://etherscan.io/tx/",
-	nodeGoerli:  "https://goerli.etherscan.io/tx/",
 	nodeSepolia: "https://sepolia.etherscan.io/tx/",
 	nodeSokol:   "https://blockscout.com/poa/sokol/tx/",
 	nodeBsc:     "https://bscscan.com/tx/",
@@ -77,7 +74,6 @@ var nodeTxExplorerUrlMap = map[string]string{
 
 var nodeApiUrlMap = map[string]string{
 	nodeMainnet: "https://api.etherscan.io/api?module=contract&action=getsourcecode&address=%s",
-	nodeGoerli:  "https://api-goerli.etherscan.io/api?module=contract&action=getsourcecode&address=%s",
 	nodeSepolia: "https://api-sepolia.etherscan.io/api?module=contract&action=getsourcecode&address=%s",
 	nodeSokol:   "https://blockscout.com/poa/sokol/api?module=contract&action=getsourcecode&address=%s",
 	nodeBsc:     "https://api.bscscan.com/api?module=contract&action=getsourcecode&address=%s",
@@ -93,7 +89,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVarP(&globalOptNodeUrl, "node-url", "", "", "the target connection node url, if this option specified, the --node option is ignored")
-	rootCmd.PersistentFlags().StringVarP(&globalOptNode, "node", "", "goerli", "mainnet | goerli | sepolia | sokol | bsc, the node type")
+	rootCmd.PersistentFlags().StringVarP(&globalOptNode, "node", "", "sepolia", "mainnet | sepolia | sokol | bsc, the node type")
 	rootCmd.PersistentFlags().StringVarP(&globalOptGasPrice, "gas-price", "", "", "the gas price, unit is gwei.")
 	rootCmd.PersistentFlags().StringVarP(&globalOptMaxPriorityFeePerGas, "max-priority-fee-per-gas", "", "", "maximum fee per gas they are willing to give to miners, unit is gwei. see eip1559")
 	rootCmd.PersistentFlags().StringVarP(&globalOptMaxFeePerGas, "max-fee-per-gas", "", "", "maximum fee per gas they are willing to pay total, unit is gwei. see eip1559")
@@ -136,8 +132,7 @@ func initConfig() {
 	var err error
 
 	// validation
-	if !contains([]string{nodeMainnet, nodeGoerli, nodeSepolia, nodeSokol,
-		nodeBsc}, globalOptNode) {
+	if !contains([]string{nodeMainnet, nodeSepolia, nodeSokol, nodeBsc}, globalOptNode) {
 		log.Printf("invalid option for --node: %v", globalOptNode)
 		_ = rootCmd.Help()
 		os.Exit(1)
