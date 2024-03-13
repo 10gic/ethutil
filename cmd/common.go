@@ -518,11 +518,11 @@ func getEIP1559GasPrice(client *ethclient.Client) (*big.Int, *big.Int, error) {
 	// maxPriorityFeePerGas = tip * 113%
 	maxPriorityFeePerGas := new(big.Int).Add(tip, buffer)
 
-	block, err := client.BlockByNumber(context.Background(), nil)
+	header, err := client.HeaderByNumber(context.Background(), nil)
 	if err != nil {
-		return nil, nil, fmt.Errorf("BlockByNumber failed: %w", err)
+		return nil, nil, fmt.Errorf("HeaderByNumber failed: %w", err)
 	}
-	baseFee := block.Header().BaseFee
+	baseFee := header.BaseFee
 	var maxFeePerGas *big.Int
 	if baseFee == nil {
 		maxFeePerGas = maxPriorityFeePerGas
@@ -613,11 +613,11 @@ func getEIP1559GasPriceByFeeHistory(client *ethclient.Client) (*big.Int, *big.In
 	maxPriorityFeePerGasEstimate = &average
 	// log.Printf("maxPriorityFeePerGasEstimate = %v", maxPriorityFeePerGasEstimate.String())
 
-	pendingBlock, err := client.BlockByNumber(context.Background(), nil)
+	header, err := client.HeaderByNumber(context.Background(), nil)
 	if err != nil {
-		return nil, nil, fmt.Errorf("BlockByNumber failed: %w", err)
+		return nil, nil, fmt.Errorf("HeaderByNumber failed: %w", err)
 	}
-	maxFeePerGasEstimate = maxFeePerGasEstimate.Add(pendingBlock.BaseFee(), maxPriorityFeePerGasEstimate)
+	maxFeePerGasEstimate = maxFeePerGasEstimate.Add(header.BaseFee, maxPriorityFeePerGasEstimate)
 	// log.Printf("maxFeePerGasEstimate = %v", maxFeePerGasEstimate.String())
 
 	return maxFeePerGasEstimate, maxPriorityFeePerGasEstimate, nil
