@@ -3,7 +3,7 @@ An Ethereum util, can transfer eth, check balance, call any contract function et
 
 # Install
 ```shell
-GO111MODULE=on go install github.com/10gic/ethutil@latest
+$ go install github.com/10gic/ethutil@latest
 ```
 
 # Usage Example
@@ -97,6 +97,15 @@ encoded parameters (input data) = 0x0000000000000000000000008f36975cdea2e6e64f85
 ```
 
 ## Generate New Private Key
+Generate mnemonic words and private key:
+```shell
+$ ethutil gen-key
+mnemonic: obvious element orbit option muffin crop abuse duck general mule satoshi doll
+private key: 0x836263588c9ea3ffa2a73b71a32d4eb886779d1e0e25f6324c582d2f1008d57f
+addr: 0x2Ed852F7F064E56aa60fDA0a703ed4A7DCC5F9fb
+```
+
+Generate multiple keys:
 ```shell
 $ ethutil --terse gen-key -n 10
 0x4a7a7070d616c70ca7caa5e34dfa944f983d530be4831e6e0086a781a679c601 0x356EC6F0b43bdEB18C291D5e629c1585c3c0BA73
@@ -219,7 +228,7 @@ Available Commands:
   drop-tx               Drop pending tx for address
   4byte                 Get the function signatures for the given selector from https://openchain.xyz/signatures
   encode-param          Encode input arguments, it's useful when you call contract's method manually
-  gen-key               Generate eth private key and its address
+  gen-key               Generate eth mnemonic words, private key, and its address
   dump-address          Dump address from private key or mnemonic
   compute-contract-addr Compute contract address before deployment
   build-raw-tx          Build raw transaction, the output can be used by rpc eth_sendRawTransaction

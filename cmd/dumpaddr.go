@@ -17,7 +17,7 @@ import (
 var dumpAddrCmdDerivationPath string
 
 func init() {
-	dumpAddrCmd.Flags().StringVarP(&dumpAddrCmdDerivationPath, "derivation-path", "", "m/44'/60'/0'/0/0", "the HD derivation path")
+	dumpAddrCmd.Flags().StringVarP(&dumpAddrCmdDerivationPath, "derivation-path", "", ethBip44Path, "the HD derivation path")
 }
 
 var dumpAddrCmd = &cobra.Command{
@@ -48,9 +48,9 @@ var dumpAddrCmd = &cobra.Command{
 			if isValidHexString(dumpAddrPrivateKeyOrMnemonic) {
 				privateKey = buildPrivateKeyFromHex(dumpAddrPrivateKeyOrMnemonic)
 			} else { // mnemonic
-				privateKeyBytes, err := mnemonicToPrivateKey(dumpAddrPrivateKeyOrMnemonic, dumpAddrCmdDerivationPath)
+				var err error
+				privateKey, err = MnemonicToPrivateKey(dumpAddrPrivateKeyOrMnemonic, dumpAddrCmdDerivationPath)
 				checkErr(err)
-				privateKey = buildPrivateKeyFromHex(hexutil.Encode(privateKeyBytes))
 			}
 
 			privateHexStr := hexutil.Encode(crypto.FromECDSA(privateKey))
@@ -111,30 +111,4 @@ func parseDerivationPath(derivationPath string) ([]uint32, error) {
 	}
 
 	return result, nil
-}
-
-func mnemonicToPrivateKey(mnemonic string, derivationPath string) ([]byte, error) {
-	// Generate a Bip32 HD wallet for the mnemonic and a user supplied password
-	seed := bip39.NewSeed(mnemonic, "")
-	// Generate a new master node using the seed.
-	masterKey, err := bip32.NewMasterKey(seed)
-	if err != nil {
-		return nil, err
-	}
-
-	childIdxs, err := parseDerivationPath(derivationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	currentKey := masterKey
-	for _, childIdx := range childIdxs {
-		currentKey, err = currentKey.NewChildKey(childIdx)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	privateKey := currentKey.Key // 32 bytes private key
-	return privateKey, nil
 }

@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/tyler-smith/go-bip32"
+	"github.com/tyler-smith/go-bip39"
 	"io"
 	"log"
 	"math/big"
@@ -23,6 +25,8 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/shopspring/decimal"
 )
+
+var ethBip44Path = "m/44'/60'/0'/0/0"
 
 var ethAddressRE = regexp.MustCompile("^(0x)?[0-9a-fA-F]{40}$")
 
@@ -716,4 +720,33 @@ func GetFuncSig(funcHash string) ([]string, error) {
 	}
 
 	return rc, nil
+}
+
+// MnemonicToPrivateKey generate private key from mnemonic words
+func MnemonicToPrivateKey(mnemonic string, derivationPath string) (*ecdsa.PrivateKey, error) {
+	// Generate a Bip32 HD wallet for the mnemonic and a user supplied password
+	seed := bip39.NewSeed(mnemonic, "")
+	// Generate a new master node using the seed.
+	masterKey, err := bip32.NewMasterKey(seed)
+	if err != nil {
+		return nil, err
+	}
+
+	childIdxs, err := parseDerivationPath(derivationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	currentKey := masterKey
+	for _, childIdx := range childIdxs {
+		currentKey, err = currentKey.NewChildKey(childIdx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	privateKeyBytes := currentKey.Key // 32 bytes private key
+
+	privateKey := buildPrivateKeyFromHex(hexutil.Encode(privateKeyBytes))
+	return privateKey, nil
 }

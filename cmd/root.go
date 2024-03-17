@@ -21,7 +21,7 @@ var (
 	globalOptPrivateKey           string
 	globalOptTerseOutput          bool
 	globalOptDryRun               bool
-	globalOptShowPreHash	      bool
+	globalOptShowPreHash          bool
 	globalOptShowRawTx            bool
 	globalOptShowInputData        bool
 	globalOptShowEstimateGas      bool
@@ -60,7 +60,7 @@ const nodeBsc = "bsc"
 
 var nodeUrlMap = map[string]string{
 	nodeMainnet: "wss://mainnet.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472", // please replace infura project id
-	nodeSepolia: "wss://sepolia.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472",    // please replace infura project id
+	nodeSepolia: "wss://sepolia.infura.io/ws/v3/21a9f5ba4bce425795cac796a66d7472", // please replace infura project id
 	nodeSokol:   "https://sokol.poa.network",
 	nodeBsc:     "https://bsc-dataseed1.binance.org",
 }
@@ -140,6 +140,9 @@ func initConfig() {
 
 	if globalOptNodeUrl == "" {
 		globalOptNodeUrl = nodeUrlMap[globalOptNode]
+	} else {
+		// Clear globalOptNode if globalOptNodeUrl is provided
+		globalOptNode = ""
 	}
 
 	if globalOptGasPrice != "" {
