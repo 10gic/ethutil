@@ -14,6 +14,16 @@ $ ethutil balance 0x79047aBf3af2a1061B108D71d6dc7BdB06474790
 addr 0x79047aBf3af2a1061B108D71d6dc7BdB06474790, balance 231.905355677037965414 ether
 ```
 
+Check balances of multiple addresses, it's really fast (only take about 10s for 10000 addresses):
+```shell
+$ ethutil balance --input-file address.txt         # address.txt format: one address per line
+addr 0x00000000219ab540356cbb839cbe05303d7705fa, balance 1.989730000000000005 ether
+addr 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2, balance 33.749145122485331533 ether
+addr 0xbe0eb53f46cd790cd13851d5eff43d12404d33e8, balance 1 ether
+addr 0x8315177ab297ba92a06054ce80a67ed4dbd7ed3a, balance 0 ether
+......
+```
+
 ## Transfer ETH
 Transfer 1 ETH to 0xB2aC853cF815B47903bc19BF4860540306F4f944:
 ```shell
