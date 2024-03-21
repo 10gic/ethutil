@@ -60,7 +60,7 @@ var queryCmd = &cobra.Command{
 			}
 			txInputData, err := hex.DecodeString(queryHexData)
 			checkErr(err)
-			output, err := Call(globalClient.EthClient, common.HexToAddress(contractAddr), txInputData)
+			output, err := Call(globalClient.RpcClient, common.HexToAddress(contractAddr), txInputData)
 			checkErr(err)
 
 			log.Printf("Output raw data\n%v\n", hex.EncodeToString(output))
@@ -94,7 +94,7 @@ var queryCmd = &cobra.Command{
 			log.Printf("input data = %v", hexutil.Encode(txInputData))
 		}
 
-		output, err := Call(globalClient.EthClient, common.HexToAddress(contractAddr), txInputData)
+		output, err := Call(globalClient.RpcClient, common.HexToAddress(contractAddr), txInputData)
 		checkErr(err)
 
 		printContractReturnData(funcSignature, output)

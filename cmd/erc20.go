@@ -82,7 +82,7 @@ var erc20Cmd = &cobra.Command{
 				log.Printf("transaction %s finished", tx)
 			}
 		} else {
-			output, err := Call(globalClient.EthClient, common.HexToAddress(contractAddr), txInputData)
+			output, err := Call(globalClient.RpcClient, common.HexToAddress(contractAddr), txInputData)
 			checkErr(err)
 
 			printContractReturnData(funcSignature, output)

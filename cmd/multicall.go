@@ -54,7 +54,7 @@ func queryEthBalancesByMulticall(addresses []string) ([]*big.Int, error) {
 
 	// call multicall contract function aggregate:
 	// function aggregate((address,bytes)[]) public payable returns (uint256 blockNumber, bytes[] memory returnData)
-	output, err := Call(globalClient.EthClient, contractAddress, append(funcSignAggregate, txInputData...))
+	output, err := Call(globalClient.RpcClient, contractAddress, append(funcSignAggregate, txInputData...))
 	checkErr(err)
 	// fmt.Printf("output = %x\n", output)
 	//

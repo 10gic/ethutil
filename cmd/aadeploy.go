@@ -93,7 +93,7 @@ func getAASimpleAccountAddr(accountOwner string) common.Address {
 	txInputData, err := buildTxInputData(funcSignature, inputArgData)
 
 	contract := getAASimpleAccountFactoryAddress()
-	output, err := Call(globalClient.EthClient, contract, txInputData)
+	output, err := Call(globalClient.RpcClient, contract, txInputData)
 	checkErr(err)
 
 	return common.BytesToAddress(output)

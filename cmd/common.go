@@ -628,11 +628,66 @@ func getEIP1559GasPriceByFeeHistory(client *ethclient.Client) (*big.Int, *big.In
 }
 
 // Call invokes the (constant) contract method.
-func Call(client *ethclient.Client, toAddress common.Address, data []byte) ([]byte, error) {
+func Call(rpcClient *rpc.Client, toAddress common.Address, data []byte) ([]byte, error) {
 	opts := new(bind.CallOpts)
 	msg := ethereum.CallMsg{From: opts.From, To: &toAddress, Data: data}
-	ctx := context.TODO()
-	return client.CallContract(ctx, msg, nil)
+
+	var result hexutil.Bytes
+	err := rpcClient.CallContext(context.Background(), &result, "eth_call", toCallArg(msg), "latest")
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+// toCallArg build call argument
+//
+// Similar with func toCallArg in https://github.com/ethereum/go-ethereum/blob/14eb8967be7acc54c5dc9a416151ac45c01251b6/ethclient/ethclient.go#L642
+// The only difference: we use 'data' field, rather than 'input' field
+//
+// Background:
+// The documentation of rpc api has changed the name of the parameter from 'data' to 'input',
+// See https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_call
+//
+// Ethereum support both 'data' and 'input', but some network (Tron) only support the old field 'data',
+// See https://developers.tron.network/reference/eth_call
+// So, 'data' has better compatibility
+func toCallArg(msg ethereum.CallMsg) interface{} {
+	arg := map[string]interface{}{
+		"from": msg.From,
+		"to":   msg.To,
+	}
+	if len(msg.Data) > 0 {
+		// For compatibility, we use 'data', rather than 'input'
+		// See: https://github.com/ethereum/go-ethereum/issues/28608
+		arg["data"] = hexutil.Bytes(msg.Data)
+	}
+	if msg.Value != nil {
+		arg["value"] = (*hexutil.Big)(msg.Value)
+	}
+	if msg.Gas != 0 {
+		arg["gas"] = hexutil.Uint64(msg.Gas)
+	}
+	if msg.GasPrice != nil {
+		arg["gasPrice"] = (*hexutil.Big)(msg.GasPrice)
+	}
+	if msg.GasFeeCap != nil {
+		arg["maxFeePerGas"] = (*hexutil.Big)(msg.GasFeeCap)
+	}
+	if msg.GasTipCap != nil {
+		arg["maxPriorityFeePerGas"] = (*hexutil.Big)(msg.GasTipCap)
+	}
+	if msg.AccessList != nil {
+		arg["accessList"] = msg.AccessList
+	}
+	if msg.BlobGasFeeCap != nil {
+		arg["maxFeePerBlobGas"] = (*hexutil.Big)(msg.BlobGasFeeCap)
+	}
+	if msg.BlobHashes != nil {
+		arg["blobVersionedHashes"] = msg.BlobHashes
+	}
+	return arg
 }
 
 // getRecoveryId gets ecdsa recover id (0 or 1) from v.

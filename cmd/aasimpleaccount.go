@@ -128,7 +128,7 @@ func GetNonce(sender string) (*big.Int, error) {
 	}
 
 	contract := aaEntryPoint
-	output, err := Call(globalClient.EthClient, contract, txInputData)
+	output, err := Call(globalClient.RpcClient, contract, txInputData)
 	if err != nil {
 		return nil, fmt.Errorf("call failed: %w", err)
 	}
