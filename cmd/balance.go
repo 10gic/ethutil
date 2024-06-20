@@ -95,7 +95,7 @@ var balanceCmd = &cobra.Command{
 			_ = cmd.Help()
 			os.Exit(1)
 		}
-		log.Printf("Current network is %v", globalOptNode)
+		log.Printf("Current chain is %v", globalOptChain)
 
 		InitGlobalClient(globalOptNodeUrl)
 

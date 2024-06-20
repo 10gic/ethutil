@@ -14,7 +14,7 @@ var dropTxCmd = &cobra.Command{
 		if globalOptPrivateKey == "" {
 			log.Fatalf("--private-key is required for drop-tx command")
 		}
-		log.Printf("Current network is %v", globalOptNode)
+		log.Printf("Current chain is %v", globalOptChain)
 
 		InitGlobalClient(globalOptNodeUrl)
 

@@ -33,23 +33,23 @@ $ ethutil transfer 0xB2aC853cF815B47903bc19BF4860540306F4f944 1 --private-key 0x
 ## Contract Interaction
 Invokes the (paid) contract method:
 ```shell
-$ ethutil --node mainnet --private-key 0xXXXX call 0xdac17f958d2ee523a2206206994597c13d831ec7 'transfer(address, uint256)' 0x8F36975cdeA2e6E64f85719788C8EFBBe89DFBbb 1000000
+$ ethutil --chain mainnet --private-key 0xXXXX call 0xdac17f958d2ee523a2206206994597c13d831ec7 'transfer(address, uint256)' 0x8F36975cdeA2e6E64f85719788C8EFBBe89DFBbb 1000000
 ```
 
 Invokes the (paid) contract method with abi file:
 ```shell
-$ ethutil --node mainnet --private-key 0xXXXX call 0xdac17f958d2ee523a2206206994597c13d831ec7 --abi-file path/to/abi transfer 0x8F36975cdeA2e6E64f85719788C8EFBBe89DFBbb 1000000
+$ ethutil --chain mainnet --private-key 0xXXXX call 0xdac17f958d2ee523a2206206994597c13d831ec7 --abi-file path/to/abi transfer 0x8F36975cdeA2e6E64f85719788C8EFBBe89DFBbb 1000000
 ```
 
 Invokes the (constant) contract method:
 ```shell
-$ ethutil --node mainnet query 0xdac17f958d2ee523a2206206994597c13d831ec7 'balanceOf(address) returns (uint256)' 0x703662e526d2b71944fbfb9d87f61de3e0f0f290
+$ ethutil --chain mainnet query 0xdac17f958d2ee523a2206206994597c13d831ec7 'balanceOf(address) returns (uint256)' 0x703662e526d2b71944fbfb9d87f61de3e0f0f290
 ret0 = 1100000000000
 ```
 
 Invokes the (constant) contract method with abi file:
 ```shell
-$ ethutil --node mainnet query 0xdac17f958d2ee523a2206206994597c13d831ec7 --abi-file path/to/abi balanceOf 0x703662e526d2b71944fbfb9d87f61de3e0f0f290
+$ ethutil --chain mainnet query 0xdac17f958d2ee523a2206206994597c13d831ec7 --abi-file path/to/abi balanceOf 0x703662e526d2b71944fbfb9d87f61de3e0f0f290
 ```
 
 ## Deploy Contract
@@ -191,7 +191,7 @@ sender = 0xf7033D6010E8F2E12b810883e1c28CAcd6D25B16
 
 ## Get Contract Runtime Bytecode
 ```shell
-$ ethutil --node mainnet code 0xd152f549545093347a162dce210e7293f1452150
+$ ethutil --chain mainnet code 0xd152f549545093347a162dce210e7293f1452150
 runtime bytecode of contract 0xd152f549545093347a162dce210e7293f1452150 is 0x608060405260043610610057576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806351ba162c1461005c578063c73a2d60146100cf578063e63d38ed14610142575b600080fd5b34801561006857600080fd5b506100cd600480360381019080803573ffffffffffffffffffffffffffffffffffffffff169060200190929190803590602001908201803590602001919091929391929390803590602001908201803590602001919091929391929390505050610188565b005b3480156100db57600080fd5b50610140600480360381019080803573ffffffffffffffffffffffffffffffffffffffff169060200190929190803590602001908201803590602001919091929391929390803590602001908201803590602001919091929391929390505050610309565b005b6101866004803603810190808035906020019082018035906020019190919293919293908035906020019082018035906020019190919293919293905050506105b0565b005b60008090505b84849050811015610301578573ffffffffffffffffffffffffffffffffffffffff166323b872dd3387878581811015156101c457fe5b9050602002013573ffffffffffffffffffffffffffffffffffffffff1686868681811015156101ef57fe5b905060200201356040518463ffffffff167c0100000000000000000000000000000000000000000000000000000000028152600401808473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020018373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020018281526020019350505050602060405180830381600087803b1580156102ae57600080fd5b505af11580156102c2573d6000803e3d6000fd5b505050506040513d60208110156102d857600080fd5b810190808051906020019092919050505015156102f457600080fd5b808060010191505061018e565b505050505050565b60008060009150600090505b8585905081101561034657838382818110151561032e57fe5b90506020020135820191508080600101915050610315565b8673ffffffffffffffffffffffffffffffffffffffff166323b872dd3330856040518463ffffffff167c0100000000000000000000000000000000000000000000000000000000028152600401808473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020018373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020018281526020019350505050602060405180830381600087803b15801561041d57600080fd5b505af1158015610431573d6000803e3d6000fd5b505050506040513d602081101561044757600080fd5b8101908080519060200190929190505050151561046357600080fd5b600090505b858590508110156105a7578673ffffffffffffffffffffffffffffffffffffffff1663a9059cbb878784818110151561049d57fe5b9050602002013573ffffffffffffffffffffffffffffffffffffffff1686868581811015156104c857fe5b905060200201356040518363ffffffff167c0100000000000000000000000000000000000000000000000000000000028152600401808373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200182815260200192505050602060405180830381600087803b15801561055457600080fd5b505af1158015610568573d6000803e3d6000fd5b505050506040513d602081101561057e57600080fd5b8101908080519060200190929190505050151561059a57600080fd5b8080600101915050610468565b50505050505050565b600080600091505b858590508210156106555785858381811015156105d157fe5b9050602002013573ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff166108fc858585818110151561061557fe5b905060200201359081150290604051600060405180830381858888f19350505050158015610647573d6000803e3d6000fd5b5081806001019250506105b8565b3073ffffffffffffffffffffffffffffffffffffffff1631905060008111156106c0573373ffffffffffffffffffffffffffffffffffffffff166108fc829081150290604051600060405180830381858888f193505050501580156106be573d6000803e3d6000fd5b505b5050505050505600a165627a7a72305820104eaf57909eb0d29f37ba9e3196e8e88438f83546136cf61270ca5d3b491e160029
 ```
 
@@ -200,13 +200,13 @@ The subcommand `erc20` is a helper for subcommand `call/query`.
 
 Example of check ERC20 balance:
 ```shell
-$ ethutil --node mainnet erc20 0xdac17f958d2ee523a2206206994597c13d831ec7 balanceOf 0x703662e526d2b71944fbfb9d87f61de3e0f0f290
+$ ethutil --chain mainnet erc20 0xdac17f958d2ee523a2206206994597c13d831ec7 balanceOf 0x703662e526d2b71944fbfb9d87f61de3e0f0f290
 
 ```
 
 Example of transfer ERC20:
 ```shell
-$ ethutil --node mainnet --private-key 0xXXXX erc20 0xdac17f958d2ee523a2206206994597c13d831ec7 transfer 0x8F36975cdeA2e6E64f85719788C8EFBBe89DFBbb 1000000
+$ ethutil --chain mainnet --private-key 0xXXXX erc20 0xdac17f958d2ee523a2206206994597c13d831ec7 transfer 0x8F36975cdeA2e6E64f85719788C8EFBBe89DFBbb 1000000
 ```
 
 ## Compute keccak hash
@@ -217,8 +217,8 @@ $ echo -n "abc" | ethutil keccak -
 
 ## Download source of verified contract
 ```shell
-$ ethutil --node mainnet download-src 0xdac17f958d2ee523a2206206994597c13d831ec7 -d output
-2021/12/12 21:25:44 Current network is mainnet
+$ ethutil --chain mainnet download-src 0xdac17f958d2ee523a2206206994597c13d831ec7 -d output
+2021/12/12 21:25:44 Current chain is mainnet
 2021/12/12 21:25:45 saving output/TetherToken.sol
 ```
 
@@ -256,14 +256,14 @@ Available Commands:
   completion            Generate the autocompletion script for the specified shell
 
 Flags:
+      --chain string                      mainnet | sepolia | sokol | bsc. This parameter can be set as the chain ID, in this case the rpc comes from https://chainid.network/chains_mini.json (default "sepolia")
       --dry-run                           do not broadcast tx
       --gas-limit uint                    the gas limit
       --gas-price string                  the gas price, unit is gwei.
   -h, --help                              help for ethutil
       --max-fee-per-gas string            maximum fee per gas they are willing to pay total, unit is gwei. see eip1559
       --max-priority-fee-per-gas string   maximum fee per gas they are willing to give to miners, unit is gwei. see eip1559
-      --node string                       mainnet | sepolia | sokol | bsc, the node type (default "sepolia")
-      --node-url string                   the target connection node url, if this option specified, the --node option is ignored
+      --node-url string                   the target connection node url, if this option specified, the --chain option is ignored
       --nonce int                         the nonce, -1 means check online (default -1)
   -k, --private-key string                the private key, eth would be send from this account
       --show-estimate-gas                 print estimate gas of tx

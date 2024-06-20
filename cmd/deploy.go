@@ -38,7 +38,7 @@ var deployCmd = &cobra.Command{
 		if deployBinFile == "" && deploySrcFile == "" {
 			log.Fatalf("must specify --bin-file or --src-file")
 		}
-		log.Printf("Current network is %v", globalOptNode)
+		log.Printf("Current chain is %v", globalOptChain)
 
 		InitGlobalClient(globalOptNodeUrl)
 

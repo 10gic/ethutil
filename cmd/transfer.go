@@ -59,7 +59,7 @@ func getGasPrice(client *ethclient.Client) (*big.Int, error) {
 
 	gasPrice, err := client.SuggestGasPrice(context.Background())
 
-	if globalOptNode == nodeMainnet {
+	if globalOptChain == nodeMainnet {
 		// in case of mainnet, get gap price from ethgasstation
 		gasPrice, err = getGasPriceFromEthGasStation()
 		if err != nil {
@@ -109,7 +109,7 @@ var transferCmd = &cobra.Command{
 			_ = cmd.Help()
 			os.Exit(1)
 		}
-		log.Printf("Current network is %v", globalOptNode)
+		log.Printf("Current chain is %v", globalOptChain)
 
 		targetAddress := args[0]
 		transferAmt := args[1]

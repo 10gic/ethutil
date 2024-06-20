@@ -13,7 +13,7 @@ var aaDeployCmd = &cobra.Command{
 	Short: "Deploy AA (EIP4337) account contract, solidity source contracts/AASimpleAccountFactory.sol",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Printf("Current network is %v", globalOptNode)
+		log.Printf("Current chain is %v", globalOptChain)
 
 		var accountOwnerAddress = args[0]
 

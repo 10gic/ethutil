@@ -40,7 +40,7 @@ var erc20Cmd = &cobra.Command{
 	Short: "Call ERC20 contract, a helper for subcommand call/query",
 	Args:  cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Printf("Current network is %v", globalOptNode)
+		log.Printf("Current chain is %v", globalOptChain)
 
 		InitGlobalClient(globalOptNodeUrl)
 

@@ -1,8 +1,14 @@
 package cmd
 
 import (
+	"encoding/json"
+	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -12,7 +18,7 @@ import (
 
 var (
 	globalOptNodeUrl              string
-	globalOptNode                 string
+	globalOptChain                string
 	globalOptGasPrice             string
 	globalOptMaxPriorityFeePerGas string
 	globalOptMaxFeePerGas         string
@@ -88,8 +94,8 @@ func init() {
 	cobra.EnableCommandSorting = false
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVarP(&globalOptNodeUrl, "node-url", "", "", "the target connection node url, if this option specified, the --node option is ignored")
-	rootCmd.PersistentFlags().StringVarP(&globalOptNode, "node", "", "sepolia", "mainnet | sepolia | sokol | bsc, the node type")
+	rootCmd.PersistentFlags().StringVarP(&globalOptNodeUrl, "node-url", "", "", "the target connection node url, if this option specified, the --chain option is ignored")
+	rootCmd.PersistentFlags().StringVarP(&globalOptChain, "chain", "", "sepolia", "mainnet | sepolia | sokol | bsc. This parameter can be set as the chain ID, in this case the rpc comes from https://chainid.network/chains_mini.json")
 	rootCmd.PersistentFlags().StringVarP(&globalOptGasPrice, "gas-price", "", "", "the gas price, unit is gwei.")
 	rootCmd.PersistentFlags().StringVarP(&globalOptMaxPriorityFeePerGas, "max-priority-fee-per-gas", "", "", "maximum fee per gas they are willing to give to miners, unit is gwei. see eip1559")
 	rootCmd.PersistentFlags().StringVarP(&globalOptMaxFeePerGas, "max-fee-per-gas", "", "", "maximum fee per gas they are willing to pay total, unit is gwei. see eip1559")
@@ -131,18 +137,64 @@ func init() {
 func initConfig() {
 	var err error
 
-	// validation
-	if !contains([]string{nodeMainnet, nodeSepolia, nodeSokol, nodeBsc}, globalOptNode) {
-		log.Printf("invalid option for --node: %v", globalOptNode)
-		_ = rootCmd.Help()
-		os.Exit(1)
+	if !contains([]string{nodeMainnet, nodeSepolia, nodeSokol, nodeBsc}, globalOptChain) {
+		var chainId = globalOptChain
+		log.Printf("Query node rpc for chain %s", chainId)
+
+		// Get rpc from https://chainid.network/chains_mini.json
+		resp, err := http.Get("https://chainid.network/chains_mini.json")
+		checkErr(err)
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		checkErr(err)
+
+		type respItem struct {
+			Name           string `json:"name"`
+			ChainId        uint64 `json:"chainId"`
+			ShortName      string `json:"shortName"`
+			NativeCurrency struct {
+				Symbol   string `json:"symbol"`
+				Decimals uint64 `json:"decimals"`
+			} `json:"nativeCurrency"`
+			Rpc     []string `json:"rpc"`
+			InfoUrl string   `json:"infoURL"`
+		}
+
+		var data []respItem
+		err = json.Unmarshal(body, &data)
+		checkErr(err)
+
+		var finalRpc = ""
+		for _, item := range data {
+			if strconv.Itoa(int(item.ChainId)) == chainId {
+				if item.NativeCurrency.Decimals != 18 {
+					panic(fmt.Sprintf("Only support chain with decimals 18, but %s is %d", globalOptChain, item.NativeCurrency.Decimals))
+				}
+
+				// filter out rpc contains '${', for example, https://mainnet.infura.io/v3/${INFURA_API_KEY}
+				for _, nodeRpc := range item.Rpc {
+					if !strings.Contains(nodeRpc, "${") {
+						finalRpc = nodeRpc
+					}
+				}
+				break
+			}
+		}
+
+		if finalRpc == "" {
+			log.Printf("Chain %v is not supported", globalOptChain)
+			os.Exit(1)
+		}
+
+		log.Printf("Use node rpc %s", finalRpc)
+		globalOptNodeUrl = finalRpc
 	}
 
 	if globalOptNodeUrl == "" {
-		globalOptNodeUrl = nodeUrlMap[globalOptNode]
+		globalOptNodeUrl = nodeUrlMap[globalOptChain]
 	} else {
-		// Clear globalOptNode if globalOptNodeUrl is provided
-		globalOptNode = ""
+		// Clear globalOptChain if globalOptNodeUrl is provided
+		globalOptChain = ""
 	}
 
 	if globalOptGasPrice != "" {

@@ -23,7 +23,7 @@ var downloadSrcCmd = &cobra.Command{
 	Short: "Download source code of contract from block explorer platform, eg. etherscan.",
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Printf("Current network is %v", globalOptNode)
+		log.Printf("Current chain is %v", globalOptChain)
 
 		if err := downloadSrc(args[0]); err != nil {
 			log.Fatalf("downloadSrc failed %v", err)
@@ -32,7 +32,7 @@ var downloadSrcCmd = &cobra.Command{
 }
 
 func downloadSrc(contractAddress string) error {
-	var requestUrl = fmt.Sprintf(nodeApiUrlMap[globalOptNode], contractAddress)
+	var requestUrl = fmt.Sprintf(nodeApiUrlMap[globalOptChain], contractAddress)
 
 	resp, err := http.Get(requestUrl)
 	if err != nil {

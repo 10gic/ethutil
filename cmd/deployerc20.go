@@ -12,7 +12,7 @@ var deployErc20Cmd = &cobra.Command{
 	Use:   "deploy-erc20 [total-supply [name [symbol [decimals]]]]",
 	Short: "Deploy an ERC20 token",
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Printf("Current network is %v", globalOptNode)
+		log.Printf("Current chain is %v", globalOptChain)
 
 		// Some default value
 		var totalSupply = "10000000000000000000000000"
