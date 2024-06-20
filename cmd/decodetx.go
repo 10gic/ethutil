@@ -55,24 +55,24 @@ func decodeEip155(rawTxHexData string) {
 		panic("rlp decode failed, may not a valid eth raw transaction")
 	}
 
-	fmt.Printf("basic info (eip155):\n")
-	fmt.Printf("nonce = %d\n", tx.Nonce())
-	fmt.Printf("gasPrice = %s, i.e. %s Gwei\n", tx.GasPrice().String(), wei2Other(bigInt2Decimal(tx.GasPrice()), unitGwei).String())
-	fmt.Printf("gasLimit = %d\n", tx.Gas())
+	fmt.Printf("basic info:\n")
+	fmt.Printf("type = eip155, i.e. legacy transaction\n")
+	if tx.ChainId().Int64() > 0 { // chain id is not available before eip155
+		fmt.Printf("chainId = %s (0x%s)\n", tx.ChainId().String(), hex.EncodeToString(tx.ChainId().Bytes()))
+	}
+	fmt.Printf("nonce = %d (0x%x)\n", tx.Nonce(), tx.Nonce())
+	fmt.Printf("gasPrice = %s (0x%s), i.e. %s Gwei\n", tx.GasPrice().String(), hex.EncodeToString(tx.GasPrice().Bytes()), wei2Other(bigInt2Decimal(tx.GasPrice()), unitGwei).String())
+	fmt.Printf("gasLimit = %d (0x%x)\n", tx.Gas(), tx.Gas())
 	if tx.To() == nil {
 		fmt.Printf("to = nil (nil means contract creation)\n")
 	} else {
 		fmt.Printf("to = %s\n", tx.To().String())
 	}
-	fmt.Printf("value = %s, i.e. %s Ether\n", tx.Value().String(), wei2Other(bigInt2Decimal(tx.Value()), unitEther).String())
+	fmt.Printf("value = %s (0x%s), i.e. %s Ether\n", tx.Value().String(), hex.EncodeToString(tx.Value().Bytes()), wei2Other(bigInt2Decimal(tx.Value()), unitEther).String())
 	fmt.Printf("data (hex) = %x\n", tx.Data())
 
-	if tx.ChainId().Int64() > 0 { // chain id is not available before eip155
-		fmt.Printf("chainId = %s\n", tx.ChainId().String())
-	}
-
 	v, r, s := tx.RawSignatureValues()
-	fmt.Printf("v = %s\n", v.String())
+	fmt.Printf("v = %s (0x%s)\n", v.String(), hex.EncodeToString(v.Bytes()))
 	fmt.Printf("r (hex) = %064x\n", r)
 	fmt.Printf("s (hex) = %064x\n", s)
 
@@ -90,7 +90,7 @@ func decodeEip155(rawTxHexData string) {
 
 	pubkeyBytes, err := RecoverPubkey(v, r, s, hash.Bytes())
 	checkErr(err)
-	fmt.Printf("uncompressed 65 bytes public key of sender (hex) = %x\n", pubkeyBytes)
+	fmt.Printf("uncompressed public key of sender (hex) = %x\n", pubkeyBytes)
 
 	// convert uncompressed public key to ecdsa.PublicKey
 	pubkey, err := crypto.UnmarshalPubkey(pubkeyBytes)
@@ -122,21 +122,21 @@ func decodeEip2930(transactionType int, transactionPayload string) {
 		panic("rlp decode failed, may not a valid eth raw transaction")
 	}
 
-	fmt.Printf("basic info (eip2930):\n")
-	fmt.Printf("transactionType = %v\n", transactionType)
-	fmt.Printf("chainId = %s\n", accessListTx.ChainID.String())
-	fmt.Printf("nonce = %d\n", accessListTx.Nonce)
-	fmt.Printf("gasPrice = %s, i.e. %s Gwei\n", accessListTx.GasPrice.String(), wei2Other(bigInt2Decimal(accessListTx.GasPrice), unitGwei).String())
-	fmt.Printf("gasLimit = %d\n", accessListTx.Gas)
+	fmt.Printf("basic info:\n")
+	fmt.Printf("type = eip2930, i.e. TxnType = %v\n", transactionType)
+	fmt.Printf("chainId = %s (0x%s)\n", accessListTx.ChainID.String(), hex.EncodeToString(accessListTx.ChainID.Bytes()))
+	fmt.Printf("nonce = %d (0x%x)\n", accessListTx.Nonce, accessListTx.Nonce)
+	fmt.Printf("gasPrice = %s (0x%s), i.e. %s Gwei\n", accessListTx.GasPrice.String(), hex.EncodeToString(accessListTx.GasPrice.Bytes()), wei2Other(bigInt2Decimal(accessListTx.GasPrice), unitGwei).String())
+	fmt.Printf("gasLimit = %d (0x%x)\n", accessListTx.Gas, accessListTx.Gas)
 	if accessListTx.To == nil {
 		fmt.Printf("to = nil (nil means contract creation)\n")
 	} else {
 		fmt.Printf("to = %s\n", accessListTx.To.String())
 	}
-	fmt.Printf("value = %s, i.e. %s Ether\n", accessListTx.Value.String(), wei2Other(bigInt2Decimal(accessListTx.Value), unitEther).String())
+	fmt.Printf("value = %s (0x%s), i.e. %s Ether\n", accessListTx.Value.String(), hex.EncodeToString(accessListTx.Value.Bytes()), wei2Other(bigInt2Decimal(accessListTx.Value), unitEther).String())
 	fmt.Printf("data (hex) = %x\n", accessListTx.Data)
 	fmt.Printf("accessList = %v\n", accessListTx.AccessList)
-	fmt.Printf("yParity (ecdsa recovery id) = %s\n", accessListTx.V)
+	fmt.Printf("yParity (ecdsa recovery id) = %s (0x%s)\n", accessListTx.V, hex.EncodeToString(accessListTx.V.Bytes()))
 	fmt.Printf("r (hex) = %064x\n", accessListTx.R)
 	fmt.Printf("s (hex) = %064x\n", accessListTx.S)
 
@@ -161,7 +161,7 @@ func decodeEip2930(transactionType int, transactionPayload string) {
 
 	pubkeyBytes, err := RecoverPubkey(accessListTx.V, accessListTx.R, accessListTx.S, hash.Bytes())
 	checkErr(err)
-	fmt.Printf("uncompressed 65 bytes public key of sender (hex) = %x\n", pubkeyBytes)
+	fmt.Printf("uncompressed public key of sender (hex) = %x\n", pubkeyBytes)
 
 	// convert uncompressed public key to ecdsa.PublicKey
 	pubkey, err := crypto.UnmarshalPubkey(pubkeyBytes)
@@ -180,22 +180,22 @@ func decodeEip1559(transactionType int, transactionPayload string) {
 		panic("rlp decode failed, may not a valid eth raw transaction")
 	}
 
-	fmt.Printf("basic info (eip1559):\n")
-	fmt.Printf("transactionType = %v\n", transactionType)
-	fmt.Printf("chainId = %s\n", dynamicFeeTx.ChainID.String())
-	fmt.Printf("nonce = %d\n", dynamicFeeTx.Nonce)
-	fmt.Printf("maxPriorityFeePerGas = %s, i.e. %s Gwei\n", dynamicFeeTx.GasTipCap.String(), wei2Other(bigInt2Decimal(dynamicFeeTx.GasTipCap), unitGwei).String())
-	fmt.Printf("maxFeePerGas = %s, i.e. %s Gwei\n", dynamicFeeTx.GasFeeCap.String(), wei2Other(bigInt2Decimal(dynamicFeeTx.GasFeeCap), unitGwei).String())
-	fmt.Printf("gasLimit = %d\n", dynamicFeeTx.Gas)
+	fmt.Printf("basic info:\n")
+	fmt.Printf("type = eip1559, i.e. TxnType = %v\n", transactionType)
+	fmt.Printf("chainId = %s (0x%s)\n", dynamicFeeTx.ChainID.String(), hex.EncodeToString(dynamicFeeTx.ChainID.Bytes()))
+	fmt.Printf("nonce = %d (0x%x)\n", dynamicFeeTx.Nonce, dynamicFeeTx.Nonce)
+	fmt.Printf("maxPriorityFeePerGas = %s (0x%s), i.e. %s Gwei\n", dynamicFeeTx.GasTipCap.String(), hex.EncodeToString(dynamicFeeTx.GasTipCap.Bytes()), wei2Other(bigInt2Decimal(dynamicFeeTx.GasTipCap), unitGwei).String())
+	fmt.Printf("maxFeePerGas = %s (0x%s), i.e. %s Gwei\n", dynamicFeeTx.GasFeeCap.String(), hex.EncodeToString(dynamicFeeTx.GasFeeCap.Bytes()), wei2Other(bigInt2Decimal(dynamicFeeTx.GasFeeCap), unitGwei).String())
+	fmt.Printf("gasLimit = %d (0x%x)\n", dynamicFeeTx.Gas, dynamicFeeTx.Gas)
 	if dynamicFeeTx.To == nil {
 		fmt.Printf("to = nil (nil means contract creation)\n")
 	} else {
 		fmt.Printf("to = %s\n", dynamicFeeTx.To.String())
 	}
-	fmt.Printf("value = %s, i.e. %s Ether\n", dynamicFeeTx.Value.String(), wei2Other(bigInt2Decimal(dynamicFeeTx.Value), unitEther).String())
+	fmt.Printf("value = %s (0x%s), i.e. %s Ether\n", dynamicFeeTx.Value.String(), hex.EncodeToString(dynamicFeeTx.Value.Bytes()), wei2Other(bigInt2Decimal(dynamicFeeTx.Value), unitEther).String())
 	fmt.Printf("data (hex) = %x\n", dynamicFeeTx.Data)
 	fmt.Printf("accessList = %v\n", dynamicFeeTx.AccessList)
-	fmt.Printf("yParity (ecdsa recovery id) = %s\n", dynamicFeeTx.V)
+	fmt.Printf("yParity (ecdsa recovery id) = %s (0x%s)\n", dynamicFeeTx.V, hex.EncodeToString(dynamicFeeTx.V.Bytes()))
 	fmt.Printf("r (hex) = %064x\n", dynamicFeeTx.R)
 	fmt.Printf("s (hex) = %064x\n", dynamicFeeTx.S)
 
@@ -221,7 +221,7 @@ func decodeEip1559(transactionType int, transactionPayload string) {
 
 	pubkeyBytes, err := RecoverPubkey(dynamicFeeTx.V, dynamicFeeTx.R, dynamicFeeTx.S, hash.Bytes())
 	checkErr(err)
-	fmt.Printf("uncompressed 65 bytes public key of sender (hex) = %x\n", pubkeyBytes)
+	fmt.Printf("uncompressed public key of sender (hex) = %x\n", pubkeyBytes)
 
 	// convert uncompressed public key to ecdsa.PublicKey
 	pubkey, err := crypto.UnmarshalPubkey(pubkeyBytes)

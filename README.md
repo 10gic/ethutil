@@ -168,15 +168,16 @@ $ ethutil broadcast-tx 0x02f866058082076f820778825208947cdf8ba6cf3599a8892cc0e70
 ## Decode Raw Transaction
 ```shell
 $ ethutil decode-tx 0xf86c808504e3b2920082520894428cf082d321d435ff0e1f8a994e01f976f19c118809b5552f5abade008026a00a27decf27241dca4e5d82bd5b7c1fbcc3f09c35a2a05cb967f2983d148ad6aba0596e9baa40ab157f5b1b0d66746472550ba9000d4154e3faa43ccce00b030452
-basic info (eip155):
-nonce = 0
-gasPrice = 21000000000, i.e. 21 Gwei
-gasLimit = 21000
+basic info:
+type = eip155, i.e. legacy transaction
+chainId = 1 (0x01)
+nonce = 0 (0x0)
+gasPrice = 21000000000 (0x04e3b29200), i.e. 21 Gwei
+gasLimit = 21000 (0x5208)
 to = 0x428Cf082D321d435fF0e1F8a994e01f976F19c11
-value = 699558979000000000, i.e. 0.699558979 Ether
+value = 699558979000000000 (0x09b5552f5abade00), i.e. 0.699558979 Ether
 data (hex) = 
-chainId = 1
-v = 38
+v = 38 (0x26)
 r (hex) = 0a27decf27241dca4e5d82bd5b7c1fbcc3f09c35a2a05cb967f2983d148ad6ab
 s (hex) = 596e9baa40ab157f5b1b0d66746472550ba9000d4154e3faa43ccce00b030452
 
@@ -184,7 +185,7 @@ derived info:
 txid (hex) = a8208564aa36d095973ce979df5bda03568ae0fb55f76517f1d91438bba84390
 hash before ecdsa sign (hex) = 75fee2d3e846aacfcd167febf6af8d17b6fb73188a06bcf7cb5b626a347bad54
 ecdsa recovery id = 1
-uncompressed 65 bytes public key of sender (hex) = 04a68b04c516ef2bec4e598c825cac73350012b2fe6f798270be34f800bab44024dc3580906d2f709013745a79f37cc4e3fd651289a46f5bdafd6e9da63389aec8
+uncompressed public key of sender (hex) = 04a68b04c516ef2bec4e598c825cac73350012b2fe6f798270be34f800bab44024dc3580906d2f709013745a79f37cc4e3fd651289a46f5bdafd6e9da63389aec8
 sender = 0xf7033D6010E8F2E12b810883e1c28CAcd6D25B16
 ```
 
