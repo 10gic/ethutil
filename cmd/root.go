@@ -34,7 +34,7 @@ var (
 	globalOptTxType               string
 	rootCmd                       = &cobra.Command{
 		Use:   "ethutil",
-		Short: "An Ethereum util, can transfer eth, check balance, call any contract function etc",
+		Short: "An Ethereum util, can transfer eth, check balance, call any contract function etc. All EVM-compatible chains are supported.",
 	}
 
 	globalClient *Client

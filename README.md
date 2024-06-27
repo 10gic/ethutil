@@ -1,5 +1,59 @@
 # ethutil
-An Ethereum util, can transfer eth, check balance, call any contract function etc
+An Ethereum util, can transfer eth, check balance, call any contract function etc. All EVM-compatible chains are supported.
+
+# Documentation
+```txt
+An Ethereum util, can transfer eth, check balance, call any contract function etc. All EVM-compatible chains are supported.
+
+Usage:
+  ethutil [command]
+
+Available Commands:
+  balance               Check eth balance for address
+  transfer              Transfer AMOUNT of eth to TARGET-ADDRESS
+  call                  Invokes the (paid) contract method
+  query                 Invokes the (constant) contract method
+  deploy                Deploy contract
+  deploy-erc20          Deploy an ERC20 token
+  drop-tx               Drop pending tx for address
+  4byte                 Get the function signatures for the given selector from https://openchain.xyz/signatures
+  encode-param          Encode input arguments, it's useful when you call contract's method manually
+  gen-key               Generate eth mnemonic words, private key, and its address
+  dump-address          Dump address from private key or mnemonic
+  compute-contract-addr Compute contract address before deployment
+  build-raw-tx          Build raw transaction, the output can be used by rpc eth_sendRawTransaction
+  broadcast-tx          Broadcast tx by rpc eth_sendRawTransaction
+  decode-tx             Decode raw transaction
+  code                  Get runtime bytecode of a contract on the blockchain
+  erc20                 Call ERC20 contract, a helper for subcommand call/query
+  keccak                Compute keccak hash
+  personal-sign         Create EIP191 personal sign
+  eip712-sign           Create EIP712 sign
+  aa-simple-account     AA (EIP4337) simple account, owned by an EOA account
+  download-src          Download source code of contract from block explorer platform, eg. etherscan.
+  help                  Help about any command
+  completion            Generate the autocompletion script for the specified shell
+
+Flags:
+      --chain string                      mainnet | sepolia | sokol | bsc. This parameter can be set as the chain ID, in this case the rpc comes from https://chainid.network/chains_mini.json (default "sepolia")
+      --dry-run                           do not broadcast tx
+      --gas-limit uint                    the gas limit
+      --gas-price string                  the gas price, unit is gwei.
+  -h, --help                              help for ethutil
+      --max-fee-per-gas string            maximum fee per gas they are willing to pay total, unit is gwei. see eip1559
+      --max-priority-fee-per-gas string   maximum fee per gas they are willing to give to miners, unit is gwei. see eip1559
+      --node-url string                   the target connection node url, if this option specified, the --chain option is ignored
+      --nonce int                         the nonce, -1 means check online (default -1)
+  -k, --private-key string                the private key, eth would be send from this account
+      --show-estimate-gas                 print estimate gas of tx
+      --show-input-data                   print input data of tx
+      --show-pre-hash                     print pre hash, the input of ecdsa sign
+      --show-raw-tx                       print raw signed tx
+      --terse                             produce terse output
+      --tx-type string                    eip155 | eip1559, the type of tx your want to send (default "eip1559")
+
+Use "ethutil [command] --help" for more information about a command.
+```
 
 # Install
 ```shell
@@ -7,16 +61,16 @@ $ go install github.com/10gic/ethutil@latest
 ```
 
 # Usage Example
-## Check Balance
+## Check Balance (extremely fast for multiple addresses)
 Check balance of an address:
 ```shell
-$ ethutil balance 0x79047aBf3af2a1061B108D71d6dc7BdB06474790
+$ ethutil --chain mainnet balance 0x79047aBf3af2a1061B108D71d6dc7BdB06474790
 addr 0x79047aBf3af2a1061B108D71d6dc7BdB06474790, balance 231.905355677037965414 ether
 ```
 
 Check balances of multiple addresses, it's really fast (only take about 10s for 10000 addresses):
 ```shell
-$ ethutil balance --input-file address.txt         # address.txt format: one address per line
+$ ethutil --chain mainnet balance --input-file address.txt         # address.txt format: one address per line
 addr 0x00000000219ab540356cbb839cbe05303d7705fa, balance 1.989730000000000005 ether
 addr 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2, balance 33.749145122485331533 ether
 addr 0xbe0eb53f46cd790cd13851d5eff43d12404d33e8, balance 1 ether
@@ -27,7 +81,7 @@ addr 0x8315177ab297ba92a06054ce80a67ed4dbd7ed3a, balance 0 ether
 ## Transfer ETH
 Transfer 1 ETH to 0xB2aC853cF815B47903bc19BF4860540306F4f944:
 ```shell
-$ ethutil transfer 0xB2aC853cF815B47903bc19BF4860540306F4f944 1 --private-key 0xXXXX
+$ ethutil --chain mainnet transfer 0xB2aC853cF815B47903bc19BF4860540306F4f944 1 --private-key 0xXXXX
 ```
 
 ## Contract Interaction
@@ -222,60 +276,6 @@ $ ethutil --chain mainnet download-src 0xdac17f958d2ee523a2206206994597c13d831ec
 2021/12/12 21:25:45 saving output/TetherToken.sol
 ```
 
-# Documentation
-```txt
-An Ethereum util, can transfer eth, check balance, call any contract function etc
-
-Usage:
-  ethutil [command]
-
-Available Commands:
-  balance               Check eth balance for address
-  transfer              Transfer AMOUNT of eth to TARGET-ADDRESS
-  call                  Invokes the (paid) contract method
-  query                 Invokes the (constant) contract method
-  deploy                Deploy contract
-  deploy-erc20          Deploy an ERC20 token
-  drop-tx               Drop pending tx for address
-  4byte                 Get the function signatures for the given selector from https://openchain.xyz/signatures
-  encode-param          Encode input arguments, it's useful when you call contract's method manually
-  gen-key               Generate eth mnemonic words, private key, and its address
-  dump-address          Dump address from private key or mnemonic
-  compute-contract-addr Compute contract address before deployment
-  build-raw-tx          Build raw transaction, the output can be used by rpc eth_sendRawTransaction
-  broadcast-tx          Broadcast tx by rpc eth_sendRawTransaction
-  decode-tx             Decode raw transaction
-  code                  Get runtime bytecode of a contract on the blockchain
-  erc20                 Call ERC20 contract, a helper for subcommand call/query
-  keccak                Compute keccak hash
-  personal-sign         Create EIP191 personal sign
-  eip712-sign           Create EIP712 sign
-  aa-simple-account     AA (EIP4337) simple account, owned by an EOA account
-  download-src          Download source code of contract from block explorer platform, eg. etherscan.
-  help                  Help about any command
-  completion            Generate the autocompletion script for the specified shell
-
-Flags:
-      --chain string                      mainnet | sepolia | sokol | bsc. This parameter can be set as the chain ID, in this case the rpc comes from https://chainid.network/chains_mini.json (default "sepolia")
-      --dry-run                           do not broadcast tx
-      --gas-limit uint                    the gas limit
-      --gas-price string                  the gas price, unit is gwei.
-  -h, --help                              help for ethutil
-      --max-fee-per-gas string            maximum fee per gas they are willing to pay total, unit is gwei. see eip1559
-      --max-priority-fee-per-gas string   maximum fee per gas they are willing to give to miners, unit is gwei. see eip1559
-      --node-url string                   the target connection node url, if this option specified, the --chain option is ignored
-      --nonce int                         the nonce, -1 means check online (default -1)
-  -k, --private-key string                the private key, eth would be send from this account
-      --show-estimate-gas                 print estimate gas of tx
-      --show-input-data                   print input data of tx
-      --show-pre-hash                     print pre hash, the input of ecdsa sign
-      --show-raw-tx                       print raw signed tx
-      --terse                             produce terse output
-      --tx-type string                    eip155 | eip1559, the type of tx your want to send (default "eip1559")
-
-Use "ethutil [command] --help" for more information about a command.
-```
-
-# Issue
+# Known Issue
 ## daily request count exceeded, request rate limited
 If `panic: daily request count exceeded, request rate limited` appears, please use your own node url. It can be changed by option `--node-url`, for example `--node-url wss://mainnet.infura.io/ws/v3/YOUR_INFURA_PROJECT_ID`
