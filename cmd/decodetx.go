@@ -144,12 +144,16 @@ func decodeEip2930(transactionType int, transactionPayload string) {
 	fmt.Printf("derived info:\n")
 
 	tx := types.NewTx(&types.AccessListTx{
+		ChainID:  accessListTx.ChainID,
 		Nonce:    accessListTx.Nonce,
 		To:       accessListTx.To,
 		Value:    accessListTx.Value,
 		Gas:      accessListTx.Gas,
 		GasPrice: accessListTx.GasPrice,
 		Data:     accessListTx.Data,
+		V:        accessListTx.V,
+		R:        accessListTx.R,
+		S:        accessListTx.S,
 	})
 
 	fmt.Printf("txid (hex) = %x\n", tx.Hash().Bytes())
@@ -203,6 +207,7 @@ func decodeEip1559(transactionType int, transactionPayload string) {
 	fmt.Printf("derived info:\n")
 
 	tx := types.NewTx(&types.DynamicFeeTx{
+		ChainID:   dynamicFeeTx.ChainID,
 		Nonce:     dynamicFeeTx.Nonce,
 		To:        dynamicFeeTx.To,
 		Value:     dynamicFeeTx.Value,
@@ -210,6 +215,9 @@ func decodeEip1559(transactionType int, transactionPayload string) {
 		GasFeeCap: dynamicFeeTx.GasFeeCap,
 		GasTipCap: dynamicFeeTx.GasTipCap,
 		Data:      dynamicFeeTx.Data,
+		V:         dynamicFeeTx.V,
+		R:         dynamicFeeTx.R,
+		S:         dynamicFeeTx.S,
 	})
 
 	fmt.Printf("txid (hex) = %x\n", tx.Hash().Bytes())
