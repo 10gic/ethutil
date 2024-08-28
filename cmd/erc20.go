@@ -36,7 +36,7 @@ func changeContractState(erc20FuncName string) bool {
 }
 
 var erc20Cmd = &cobra.Command{
-	Use:   "erc20 contract-address approve/transfer/transferFrom/balanceOf/allowance/totalSupply/name/symbol/decimals/mint [args]",
+	Use:   "erc20 <contract-address> approve/transfer/transferFrom/balanceOf/allowance/totalSupply/name/symbol/decimals/mint [args]",
 	Short: "Call ERC20 contract, a helper for subcommand call/query",
 	Args:  cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -76,7 +76,7 @@ var erc20Cmd = &cobra.Command{
 				log.Fatalf("--private-key is required for this command")
 			} else {
 				var contract = common.HexToAddress(contractAddr)
-				tx, err := Transact(globalClient.RpcClient, globalClient.EthClient, buildPrivateKeyFromHex(globalOptPrivateKey), &contract, big.NewInt(0), nil, txInputData)
+				tx, err := Transact(globalClient.RpcClient, globalClient.EthClient, hexToPrivateKey(globalOptPrivateKey), &contract, big.NewInt(0), nil, txInputData)
 				checkErr(err)
 
 				log.Printf("transaction %s finished", tx)

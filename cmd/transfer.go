@@ -75,8 +75,8 @@ func getGasPrice(client *ethclient.Client) (*big.Int, error) {
 }
 
 var transferCmd = &cobra.Command{
-	Use:   "transfer TARGET-ADDRESS AMOUNT",
-	Short: "Transfer AMOUNT of eth to TARGET-ADDRESS",
+	Use:   "transfer <target-address> <amount>",
+	Short: "Transfer native token",
 	Long:  "Transfer AMOUNT of eth to TARGET-ADDRESS, special word `all` is valid amount. unit is ether, can be changed by --unit.",
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
@@ -128,7 +128,7 @@ var transferCmd = &cobra.Command{
 		var amountInWei decimal.Decimal
 		if transferAmt == "all" {
 			// transfer all balance (only reserve some gas just pay for this tx) to target address
-			fromAddr := extractAddressFromPrivateKey(buildPrivateKeyFromHex(globalOptPrivateKey))
+			fromAddr := extractAddressFromPrivateKey(hexToPrivateKey(globalOptPrivateKey))
 
 			// Get current balance
 			balance, err := globalClient.EthClient.BalanceAt(ctx, fromAddr, nil)
@@ -155,7 +155,7 @@ var transferCmd = &cobra.Command{
 			// We must subtract `L2 fee + L1 fee` if use want transfer 'all' native token
 			if l1GasPriceOracleExisted {
 				// Estimate L1 Fee
-				privateKey := buildPrivateKeyFromHex(globalOptPrivateKey)
+				privateKey := hexToPrivateKey(globalOptPrivateKey)
 				fromAddress := extractAddressFromPrivateKey(privateKey)
 				toAddr := common.HexToAddress(targetAddress)
 				signedTx, err := BuildSignedTx(globalClient.EthClient, privateKey, &fromAddress, &toAddr, big.NewInt(0).Sub(balance, gasMayUsed), gasPrice, common.FromHex(transferHexData), nil)
@@ -177,7 +177,7 @@ var transferCmd = &cobra.Command{
 			}
 
 			amountBigInt := big.NewInt(0).Sub(balance, gasMayUsed)
-			amount = bigInt2Decimal(amountBigInt)
+			amount = bigIntToDecimal(amountBigInt)
 
 			amountInWei = amount
 		} else {
@@ -195,12 +195,12 @@ var transferCmd = &cobra.Command{
 
 func TransferHelper(rcpClient *rpc.Client, client *ethclient.Client, privateKeyHex string, toAddress string, amountInWei *big.Int, gasPrice *big.Int, data []byte) (string, error) {
 	log.Printf("transfer %v ether (%v wei) from %v to %v",
-		wei2Other(bigInt2Decimal(amountInWei), unitEther).String(),
+		wei2Other(bigIntToDecimal(amountInWei), unitEther).String(),
 		amountInWei.String(),
-		extractAddressFromPrivateKey(buildPrivateKeyFromHex(privateKeyHex)).String(),
+		extractAddressFromPrivateKey(hexToPrivateKey(privateKeyHex)).String(),
 		toAddress)
 	var toAddr = common.HexToAddress(toAddress)
-	return Transact(rcpClient, client, buildPrivateKeyFromHex(privateKeyHex), &toAddr, amountInWei, gasPrice, data)
+	return Transact(rcpClient, client, hexToPrivateKey(privateKeyHex), &toAddr, amountInWei, gasPrice, data)
 }
 
 // getL1Fee call contract function getL1Fee to get the L1 fee

@@ -10,7 +10,7 @@ import (
 )
 
 var getCodeCmd = &cobra.Command{
-	Use:   "code contract-address",
+	Use:   "code <contract-address>",
 	Short: "Get runtime bytecode of a contract on the blockchain",
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {

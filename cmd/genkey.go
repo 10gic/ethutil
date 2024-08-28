@@ -55,10 +55,12 @@ var genkeyCmd = &cobra.Command{
 
 			privateHexStr := hexutil.Encode(crypto.FromECDSA(privateKey))
 
+			publicKeyHexStr := hexutil.Encode(crypto.FromECDSAPub(&privateKey.PublicKey))
+
 			if globalOptTerseOutput {
 				fmt.Printf("%v %v\n", privateHexStr, addr)
 			} else {
-				fmt.Printf("mnemonic: %v\nprivate key: %v\naddr: %v\n", mnemonic, privateHexStr, addr)
+				fmt.Printf("mnemonic: %v\nprivate key: %v\npublic key: %v\naddr: %v\n", mnemonic, privateHexStr, publicKeyHexStr, addr)
 			}
 		}
 	},

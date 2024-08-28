@@ -10,23 +10,23 @@ Usage:
 
 Available Commands:
   balance               Check eth balance for address
-  transfer              Transfer AMOUNT of eth to TARGET-ADDRESS
-  call                  Invokes the (paid) contract method
-  query                 Invokes the (constant) contract method
+  transfer              Transfer native token
+  call                  Invoke the (paid) contract method
+  query                 Invoke the (constant) contract method
   deploy                Deploy contract
   deploy-erc20          Deploy an ERC20 token
   drop-tx               Drop pending tx for address
   4byte                 Get the function signatures for the given selector from https://openchain.xyz/signatures
   encode-param          Encode input arguments, it's useful when you call contract's method manually
   gen-key               Generate eth mnemonic words, private key, and its address
-  dump-address          Dump address from private key or mnemonic
+  dump-address          Dump address from mnemonics or private key or public key
   compute-contract-addr Compute contract address before deployment
   build-raw-tx          Build raw transaction, the output can be used by rpc eth_sendRawTransaction
   broadcast-tx          Broadcast tx by rpc eth_sendRawTransaction
   decode-tx             Decode raw transaction
   code                  Get runtime bytecode of a contract on the blockchain
   erc20                 Call ERC20 contract, a helper for subcommand call/query
-  keccak                Compute keccak hash
+  keccak                Compute keccak hash, read data from file or stdin (file name -)
   personal-sign         Create EIP191 personal sign
   eip712-sign           Create EIP712 sign
   aa-simple-account     AA (EIP4337) simple account, owned by an EOA account
@@ -57,7 +57,7 @@ Use "ethutil [command] --help" for more information about a command.
 
 # Install
 ```shell
-$ go install github.com/10gic/ethutil@latest
+go install github.com/10gic/ethutil@latest
 ```
 
 # Usage Example
@@ -166,6 +166,7 @@ Generate mnemonic words and private key:
 $ ethutil gen-key
 mnemonic: obvious element orbit option muffin crop abuse duck general mule satoshi doll
 private key: 0x836263588c9ea3ffa2a73b71a32d4eb886779d1e0e25f6324c582d2f1008d57f
+public key: 0x04049817a72deed750a27a7abc772169378f1547133861d564eba86561a45f861658bcf9ba9cd1be852df8e1c2df76492402c665b9644fb2a37b29644ac17c0d45
 addr: 0x2Ed852F7F064E56aa60fDA0a703ed4A7DCC5F9fb
 ```
 
@@ -184,10 +185,36 @@ $ ethutil --terse gen-key -n 10
 0x69d5b18f0f6a17b5b0d8b9d5ddc4531d6a14d023b789c4b3d753e40562254a1b 0x8F36975cdeA2e6E64f85719788C8EFBBe89DFBbb
 ```
 
-## Dump Address From Private Key
+## Dump Address
+Dump address from mnemonic:
 ```shell
-$ ethutil dump-address 0xef065dcbc43081c63c0fbf389ec8df3872d9d61b1bc2e98d7a0a4395d11314d2
-private key 0xef065dcbc43081c63c0fbf389ec8df3872d9d61b1bc2e98d7a0a4395d11314d2, addr 0xB2aC853cF815B47903bc19BF4860540306F4f944
+$ ethutil dump-address 'obvious element orbit option muffin crop abuse duck general mule satoshi doll'
+private key: 0x836263588c9ea3ffa2a73b71a32d4eb886779d1e0e25f6324c582d2f1008d57f
+public key: 0x04049817a72deed750a27a7abc772169378f1547133861d564eba86561a45f861658bcf9ba9cd1be852df8e1c2df76492402c665b9644fb2a37b29644ac17c0d45
+addr: 0x2Ed852F7F064E56aa60fDA0a703ed4A7DCC5F9fb
+```
+
+Dump address from mnemonic with derivation path:
+```shell
+$ ethutil dump-address --derivation-path "m/44'/61'/0'/0/0" 'obvious element orbit option muffin crop abuse duck general mule satoshi doll'
+private key: 0x25b2cb153e31292c0ad8f394292d0f3838338763a97c23376d4ff4d30901b487
+public key: 0x044c296796ec2bc3c2f02b77064d71bd198254d3c8f72a648a4f3f59e0830b20e53299dad3a5edccc8d73e9821d92e508b108a3e8c1e689a3b5914260e33dfe278
+addr: 0xeBe604aD190F42F587b01308Ce084dF6163A0411
+```
+
+Dump address from private key:
+```shell
+$ ethutil dump-address 0x836263588c9ea3ffa2a73b71a32d4eb886779d1e0e25f6324c582d2f1008d57f
+private key: 0x836263588c9ea3ffa2a73b71a32d4eb886779d1e0e25f6324c582d2f1008d57f
+public key: 0x04049817a72deed750a27a7abc772169378f1547133861d564eba86561a45f861658bcf9ba9cd1be852df8e1c2df76492402c665b9644fb2a37b29644ac17c0d45
+addr: 0x2Ed852F7F064E56aa60fDA0a703ed4A7DCC5F9fb
+```
+
+Dump address from public key:
+```shell
+$ ethutil dump-address 0x04049817a72deed750a27a7abc772169378f1547133861d564eba86561a45f861658bcf9ba9cd1be852df8e1c2df76492402c665b9644fb2a37b29644ac17c0d45
+public key: 0x04049817a72deed750a27a7abc772169378f1547133861d564eba86561a45f861658bcf9ba9cd1be852df8e1c2df76492402c665b9644fb2a37b29644ac17c0d45
+addr: 0x2Ed852F7F064E56aa60fDA0a703ed4A7DCC5F9fb
 ```
 
 ## Compute Contract Address

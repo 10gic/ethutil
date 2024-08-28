@@ -29,7 +29,7 @@ func TestPersonalSign(t *testing.T) {
 	}
 
 	for i, tc := range tests {
-		got, _ := personalSign([]byte(tc.input1), buildPrivateKeyFromHex(tc.input2))
+		got, _ := personalSign([]byte(tc.input1), hexToPrivateKey(tc.input2))
 		if tc.want != hexutil.Encode(got) {
 			t.Fatalf("test %d: expected: %v, got: %v", i+1, tc.want, got)
 		}

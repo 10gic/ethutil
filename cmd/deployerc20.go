@@ -61,7 +61,7 @@ var deployErc20Cmd = &cobra.Command{
 			log.Fatalf("--private-key is required for deploy command")
 		}
 
-		tx, err := Transact(globalClient.RpcClient, globalClient.EthClient, buildPrivateKeyFromHex(globalOptPrivateKey), nil, big.NewInt(0), nil, txData)
+		tx, err := Transact(globalClient.RpcClient, globalClient.EthClient, hexToPrivateKey(globalOptPrivateKey), nil, big.NewInt(0), nil, txData)
 		checkErr(err)
 
 		log.Printf("transaction %s finished", tx)

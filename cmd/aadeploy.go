@@ -9,7 +9,7 @@ import (
 
 // aaDeployCmd represents the aaDeploy command
 var aaDeployCmd = &cobra.Command{
-	Use:   "deploy ACCOUNT-OWNER-ADDRESS",
+	Use:   "deploy <account-owner-address>",
 	Short: "Deploy AA (EIP4337) account contract, solidity source contracts/AASimpleAccountFactory.sol",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -73,7 +73,7 @@ func deployAASimpleAccountFactory() error {
 
 	log.Printf("deploying AA simple account factory contract")
 	contract := singletonFactoryAddr
-	tx, err := Transact(globalClient.RpcClient, globalClient.EthClient, buildPrivateKeyFromHex(globalOptPrivateKey), &contract, big.NewInt(0), nil, txInputData)
+	tx, err := Transact(globalClient.RpcClient, globalClient.EthClient, hexToPrivateKey(globalOptPrivateKey), &contract, big.NewInt(0), nil, txInputData)
 	if err != nil {
 		return err
 	}
@@ -115,7 +115,7 @@ func deployAASimpleAccount(accountOwner string) error {
 
 	log.Printf("deploying AA account contract")
 	contract := getAASimpleAccountFactoryAddress()
-	tx, err := Transact(globalClient.RpcClient, globalClient.EthClient, buildPrivateKeyFromHex(globalOptPrivateKey), &contract, big.NewInt(0), nil, txInputData)
+	tx, err := Transact(globalClient.RpcClient, globalClient.EthClient, hexToPrivateKey(globalOptPrivateKey), &contract, big.NewInt(0), nil, txInputData)
 	if err != nil {
 		return err
 	}

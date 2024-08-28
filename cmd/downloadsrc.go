@@ -19,7 +19,7 @@ func init() {
 }
 
 var downloadSrcCmd = &cobra.Command{
-	Use:   "download-src [flags] contract-address",
+	Use:   "download-src [flags] <contract-address>",
 	Short: "Download source code of contract from block explorer platform, eg. etherscan.",
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {

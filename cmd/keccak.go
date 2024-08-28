@@ -17,8 +17,8 @@ func init() {
 }
 
 var keccakCmd = &cobra.Command{
-	Use:   "keccak [flags] [file] ...",
-	Short: "Compute keccak hash",
+	Use:   "keccak [flags] <file> ...",
+	Short: "Compute keccak hash, read data from file or stdin (file name -)",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 0 {
 			// if no file specified, read from stdin

@@ -49,7 +49,7 @@ func validationBalanceCmdOpts() bool {
 var addresses []string
 
 var balanceCmd = &cobra.Command{
-	Use:   "balance ETH-ADDRESS1 [ETH-ADDRESS2 ...]",
+	Use:   "balance <eth-address1> <eth-address2> ...",
 	Short: "Check eth balance for address",
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 && len(balanceInputFile) == 0 {
@@ -121,9 +121,9 @@ var balanceCmd = &cobra.Command{
 				// print output immediately if no sort demand
 				if balanceSortOpt == sortNo {
 					if globalOptTerseOutput {
-						fmt.Printf("%v %s\n", addr, wei2Other(bigInt2Decimal(balance), balanceUnit).String())
+						fmt.Printf("%v %s\n", addr, wei2Other(bigIntToDecimal(balance), balanceUnit).String())
 					} else {
-						fmt.Printf("addr %v, balance %s %s\n", addr, wei2Other(bigInt2Decimal(balance), balanceUnit).String(), balanceUnit)
+						fmt.Printf("addr %v, balance %s %s\n", addr, wei2Other(bigIntToDecimal(balance), balanceUnit).String(), balanceUnit)
 					}
 					finishOutput = true
 				}
@@ -139,9 +139,9 @@ var balanceCmd = &cobra.Command{
 				// print output immediately if no sort demand
 				if balanceSortOpt == sortNo {
 					if globalOptTerseOutput {
-						fmt.Printf("%v %s\n", addr, wei2Other(bigInt2Decimal(balance), balanceUnit).String())
+						fmt.Printf("%v %s\n", addr, wei2Other(bigIntToDecimal(balance), balanceUnit).String())
 					} else {
-						fmt.Printf("addr %v, balance %s %s\n", addr, wei2Other(bigInt2Decimal(balance), balanceUnit).String(), balanceUnit)
+						fmt.Printf("addr %v, balance %s %s\n", addr, wei2Other(bigIntToDecimal(balance), balanceUnit).String(), balanceUnit)
 					}
 					finishOutput = true
 				}
@@ -161,9 +161,9 @@ var balanceCmd = &cobra.Command{
 		if !finishOutput {
 			for _, result := range results {
 				if globalOptTerseOutput {
-					fmt.Printf("%v %s\n", result.addr, wei2Other(bigInt2Decimal(&result.balance), balanceUnit).String())
+					fmt.Printf("%v %s\n", result.addr, wei2Other(bigIntToDecimal(&result.balance), balanceUnit).String())
 				} else {
-					fmt.Printf("addr %v, balance %s %s\n", result.addr, wei2Other(bigInt2Decimal(&result.balance), balanceUnit).String(), balanceUnit)
+					fmt.Printf("addr %v, balance %s %s\n", result.addr, wei2Other(bigIntToDecimal(&result.balance), balanceUnit).String(), balanceUnit)
 				}
 			}
 			finishOutput = true

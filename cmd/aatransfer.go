@@ -18,14 +18,14 @@ func init() {
 
 // aaTransferCmd represents the AA Simple Account transfer command
 var aaTransferCmd = &cobra.Command{
-	Use:   "transfer TARGET-ADDRESS AMOUNT",
+	Use:   "transfer <target-address> <amount>",
 	Short: "Transfer AMOUNT of eth from AA-ACCOUNT-CONTRACT to TARGET-ADDRESS",
 	Args:  cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		if aaOwnerPrivateKey == "" {
 			log.Fatalf("--owner-private-key is required for this command")
 		}
-		ownerPrivateKey := buildPrivateKeyFromHex(aaOwnerPrivateKey)
+		ownerPrivateKey := hexToPrivateKey(aaOwnerPrivateKey)
 
 		targetAddress := args[0]
 		transferAmt := args[1]

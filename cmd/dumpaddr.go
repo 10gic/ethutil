@@ -21,12 +21,12 @@ func init() {
 }
 
 var dumpAddrCmd = &cobra.Command{
-	Use:     "dump-address private-key-or-mnemonics private-key-or-mnemonics ...",
+	Use:     "dump-address <mnemonics-or-private-key-or-public-key> <mnemonics-or-private-key-or-public-key> ...",
 	Aliases: []string{"dump-addr"},
-	Short:   "Dump address from private key or mnemonic",
+	Short:   "Dump address from mnemonics or private key or public key",
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
-			return fmt.Errorf("requires private-key-or-mnemonics")
+			return fmt.Errorf("requires mnemonics-or-private-key-or-public-key")
 		}
 		for _, arg := range args {
 			if isValidHexString(arg) {
@@ -35,31 +35,46 @@ var dumpAddrCmd = &cobra.Command{
 			if bip39.IsMnemonicValid(arg) {
 				continue
 			}
-			return fmt.Errorf("invalid private-key-or-mnemonics: %v", arg)
+			return fmt.Errorf("invalid mnemonics-or-private-key-or-public-key: %v", arg)
 		}
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		privateKeyOrMnemonics := args
+		var err error
 
 		for _, dumpAddrPrivateKeyOrMnemonic := range privateKeyOrMnemonics {
 
 			var privateKey *ecdsa.PrivateKey
+			var publicKey *ecdsa.PublicKey
 			if isValidHexString(dumpAddrPrivateKeyOrMnemonic) {
-				privateKey = buildPrivateKeyFromHex(dumpAddrPrivateKeyOrMnemonic)
+				var hexLen = len(remove0xPrefix(dumpAddrPrivateKeyOrMnemonic))
+				if hexLen == 64 { // private key
+					privateKey = hexToPrivateKey(dumpAddrPrivateKeyOrMnemonic)
+					publicKey = &privateKey.PublicKey
+				} else if hexLen == 66 || hexLen == 130 { // public key
+					publicKey, err = hexToPublicKey(dumpAddrPrivateKeyOrMnemonic)
+					checkErr(err)
+				} else {
+					fmt.Printf("invalid key length %v\n", hexLen)
+					return
+				}
 			} else { // mnemonic
-				var err error
 				privateKey, err = MnemonicToPrivateKey(dumpAddrPrivateKeyOrMnemonic, dumpAddrCmdDerivationPath)
+				publicKey = &privateKey.PublicKey
 				checkErr(err)
 			}
 
-			privateHexStr := hexutil.Encode(crypto.FromECDSA(privateKey))
-			addr := extractAddressFromPrivateKey(privateKey).String()
-			if globalOptTerseOutput {
-				fmt.Printf("%v %v\n", privateHexStr, addr)
-			} else {
-				fmt.Printf("private key %v, addr %v\n", privateHexStr, addr)
+			if privateKey != nil {
+				privateHexStr := hexutil.Encode(crypto.FromECDSA(privateKey))
+				fmt.Printf("private key: %v\n", privateHexStr)
 			}
+
+			publicKeyHexStr := hexutil.Encode(crypto.FromECDSAPub(publicKey))
+			fmt.Printf("private key: %v\n", publicKeyHexStr)
+
+			addr := crypto.PubkeyToAddress(*publicKey).String()
+			fmt.Printf("addr: %v\n", addr)
 		}
 	},
 }

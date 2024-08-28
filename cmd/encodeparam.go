@@ -26,7 +26,7 @@ func init() {
 }
 
 var encodeParamCmd = &cobra.Command{
-	Use:   "encode-param 'function signature' arg1 arg2 ...",
+	Use:   "encode-param <function-signature> [arg1 arg2 ...]",
 	Short: "Encode input arguments, it's useful when you call contract's method manually",
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {

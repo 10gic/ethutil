@@ -23,8 +23,8 @@ func init() {
 }
 
 var queryCmd = &cobra.Command{
-	Use:   "query CONTRACT-ADDRESS ['function definition' arg1 arg2 ...]",
-	Short: "Invokes the (constant) contract method",
+	Use:   "query <contract-address> [<function-definition> arg1 arg2 ...]",
+	Short: "Invoke the (constant) contract method",
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(queryHexData) > 0 && len(args) > 1 {
 			return fmt.Errorf("--hex-data and 'function definition' cannot be specified at the same time")

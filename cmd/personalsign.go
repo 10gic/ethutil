@@ -12,7 +12,7 @@ import (
 
 // personalSignCmd represents the personalSign command
 var personalSignCmd = &cobra.Command{
-	Use:   "personal-sign [msg]",
+	Use:   "personal-sign <msg>",
 	Short: "Create EIP191 personal sign",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -22,7 +22,7 @@ var personalSignCmd = &cobra.Command{
 			log.Fatalf("--private-key is required for this command")
 		}
 
-		privateKey := buildPrivateKeyFromHex(globalOptPrivateKey)
+		privateKey := hexToPrivateKey(globalOptPrivateKey)
 		sig, err := personalSign([]byte(msg), privateKey)
 		checkErr(err)
 		fmt.Printf("personal sign: %s, signer address: %s\n", hexutil.Encode(sig), extractAddressFromPrivateKey(privateKey).String())

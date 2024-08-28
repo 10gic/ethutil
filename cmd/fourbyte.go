@@ -9,7 +9,7 @@ import (
 )
 
 var fourByteCmd = &cobra.Command{
-	Use:   "4byte [func-selector]",
+	Use:   "4byte <func-selector>",
 	Short: "Get the function signatures for the given selector from https://openchain.xyz/signatures",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {

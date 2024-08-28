@@ -8,7 +8,7 @@ import (
 
 // broadcastTxCmd represents the broadcastTx command
 var broadcastTxCmd = &cobra.Command{
-	Use:   "broadcast-tx SIGNED-RAW-TX",
+	Use:   "broadcast-tx <signed-raw-tx>",
 	Short: "Broadcast tx by rpc eth_sendRawTransaction",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {

@@ -21,6 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/shopspring/decimal"
@@ -110,16 +111,20 @@ func has0xPrefix(str string) bool {
 	return len(str) >= 2 && str[0] == '0' && (str[1] == 'x' || str[1] == 'X')
 }
 
+// remove0xPrefix remove 0x prefix if
+func remove0xPrefix(str string) string {
+	if has0xPrefix(str) {
+		return str[2:]
+	}
+	return str
+}
+
 // isValidHexString returns true if str is a valid hex string or empty string.
 func isValidHexString(str string) bool {
 	if str == "" {
 		return true
 	}
-	var hexWithout0x = str
-	if has0xPrefix(str) {
-		hexWithout0x = str[2:]
-	}
-	_, err := hex.DecodeString(hexWithout0x)
+	_, err := hex.DecodeString(remove0xPrefix(str))
 	if err != nil {
 		return false
 	}
@@ -127,27 +132,56 @@ func isValidHexString(str string) bool {
 	return true
 }
 
-// bigInt2Decimal converts x from big.Int to decimal.Decimal.
-func bigInt2Decimal(x *big.Int) decimal.Decimal {
+// bigIntToDecimal converts x from big.Int to decimal.Decimal.
+func bigIntToDecimal(x *big.Int) decimal.Decimal {
 	if x == nil {
 		return decimal.New(0, 0)
 	}
 	return decimal.NewFromBigInt(x, 0)
 }
 
-// buildPrivateKeyFromHex builds ecdsa.PrivateKey from hex string (the leading 0x is optional),
+// hexToPrivateKey builds ecdsa.PrivateKey from hex string (the leading 0x is optional),
 // it would panic if input an invalid hex string.
-func buildPrivateKeyFromHex(privateKeyHex string) *ecdsa.PrivateKey {
-	if has0xPrefix(privateKeyHex) {
-		privateKeyHex = privateKeyHex[2:] // remove leading 0x
-	}
-
+func hexToPrivateKey(privateKeyHex string) *ecdsa.PrivateKey {
+	privateKeyHex = remove0xPrefix(privateKeyHex)
 	privateKey, err := crypto.HexToECDSA(privateKeyHex)
 	if err != nil {
 		panic(fmt.Sprintf("parse private key failed: %s", err))
 	}
 
 	return privateKey
+}
+
+// hexToPublicKey builds ecdsa.PublicKey from hex string (the leading 0x is optional),
+// it would panic if input an invalid hex string.
+func hexToPublicKey(publicKeyHex string) (*ecdsa.PublicKey, error) {
+	publicKeyHex = remove0xPrefix(publicKeyHex)
+
+	// Convert the hexadecimal string to a byte slice
+	pubKeyBytes, err := hex.DecodeString(publicKeyHex)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode hex string: %v", err)
+	}
+
+	uncompressedPubKey := make([]byte, 65)
+	if len(pubKeyBytes) == 65 {
+		// In the case of a uncompressed public key, directly use it
+		uncompressedPubKey = pubKeyBytes
+	} else {
+		// In the case of a compressed public key, decompress it to x, y coordinates
+		x, y := secp256k1.DecompressPubkey(pubKeyBytes)
+		if x == nil {
+			return nil, fmt.Errorf("failed to decompress public key")
+		}
+
+		// Convert the x, y coordinates to a uncompressed public key
+		uncompressedPubKey[0] = 0x04
+		x.FillBytes(uncompressedPubKey[1:33])
+		y.FillBytes(uncompressedPubKey[33:])
+	}
+
+	// Parse the uncompressed public key
+	return crypto.UnmarshalPubkey(uncompressedPubKey)
 }
 
 // wei2Other converts wei to other unit (specified by targetUnit).
@@ -217,7 +251,7 @@ recheck:
 
 const EthGasStationUrl = "https://ethgasstation.info/json/ethgasAPI.json"
 
-// GasStationPrice, the struct of response of EthGasStationUrl
+// GasStationPrice the struct of response of EthGasStationUrl
 type GasStationPrice struct {
 	Fast        float64
 	Fastest     float64
@@ -710,7 +744,6 @@ func getRecoveryId(v *big.Int) int {
 // buildECDSASignature builds a 65-byte compact ECDSA signature (containing the recovery id as the last element)
 func buildECDSASignature(v, r, s *big.Int) []byte {
 	var recoveryId = getRecoveryId(v)
-	// println("recoveryId", recoveryId)
 
 	var rBytes = make([]byte, 32, 32)
 	var sBytes = make([]byte, 32, 32)
@@ -732,7 +765,7 @@ func RecoverPubkey(v, r, s *big.Int, msg []byte) ([]byte, error) {
 	return crypto.Ecrecover(msg, signature)
 }
 
-// getFuncSig recover function signature from 4 bytes hash
+// GetFuncSig recover function signature from 4 bytes hash
 // For example:
 //
 //	param: "0x8c905368"
@@ -802,6 +835,6 @@ func MnemonicToPrivateKey(mnemonic string, derivationPath string) (*ecdsa.Privat
 
 	privateKeyBytes := currentKey.Key // 32 bytes private key
 
-	privateKey := buildPrivateKeyFromHex(hexutil.Encode(privateKeyBytes))
+	privateKey := hexToPrivateKey(hexutil.Encode(privateKeyBytes))
 	return privateKey, nil
 }

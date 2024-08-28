@@ -27,7 +27,7 @@ var dropTxCmd = &cobra.Command{
 		gasPrice.Add(gasPrice, big.NewInt(10*1000000000)) // plus 10 gwei
 		log.Printf("gas price change to %v wei", gasPrice)
 
-		addr := extractAddressFromPrivateKey(buildPrivateKeyFromHex(globalOptPrivateKey)).String()
+		addr := extractAddressFromPrivateKey(hexToPrivateKey(globalOptPrivateKey)).String()
 		if tx, err := TransferHelper(globalClient.RpcClient, globalClient.EthClient, globalOptPrivateKey, addr, big.NewInt(0), gasPrice, nil); err != nil {
 			log.Fatalf("transfer 0 wei to self fail: %v", err)
 		} else {

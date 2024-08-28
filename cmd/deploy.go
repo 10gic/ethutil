@@ -32,7 +32,7 @@ func init() {
 }
 
 var deployCmd = &cobra.Command{
-	Use:   "deploy [constructor signature] arg1 arg2 ...",
+	Use:   "deploy <constructor-signature> [arg1 arg2 ...]",
 	Short: "Deploy contract",
 	Run: func(cmd *cobra.Command, args []string) {
 		if deployBinFile == "" && deploySrcFile == "" {
@@ -134,7 +134,7 @@ var deployCmd = &cobra.Command{
 		var value = decimal.RequireFromString(deployValue)
 		var valueInWei = unify2Wei(value, deployValueUnit)
 
-		tx, err := Transact(globalClient.RpcClient, globalClient.EthClient, buildPrivateKeyFromHex(globalOptPrivateKey), nil, valueInWei.BigInt(), nil, txData)
+		tx, err := Transact(globalClient.RpcClient, globalClient.EthClient, hexToPrivateKey(globalOptPrivateKey), nil, valueInWei.BigInt(), nil, txData)
 		checkErr(err)
 
 		log.Printf("transaction %s finished", tx)

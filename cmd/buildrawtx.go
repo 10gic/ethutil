@@ -19,7 +19,7 @@ func init() {
 
 // buildRawTxCmd represents the encode-raw-tx command
 var buildRawTxCmd = &cobra.Command{
-	Use:   "build-raw-tx FROM-ADDRESS TO-ADDRESS VALUE-IN-ETHER",
+	Use:   "build-raw-tx <from-address> <to-address> <value-in-ether>",
 	Short: "Build raw transaction, the output can be used by rpc eth_sendRawTransaction",
 	Args:  cobra.ExactArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -31,7 +31,7 @@ var buildRawTxCmd = &cobra.Command{
 
 		var privateKey *ecdsa.PrivateKey
 		if globalOptPrivateKey != "" {
-			privateKey = buildPrivateKeyFromHex(globalOptPrivateKey)
+			privateKey = hexToPrivateKey(globalOptPrivateKey)
 		}
 
 		if globalOptPrivateKey == "" && buildRawTxSignData == "" {

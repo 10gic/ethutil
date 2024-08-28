@@ -44,7 +44,7 @@ func validationComputeContractAddrCmdOpts() bool {
 }
 
 var computeContractAddrCmd = &cobra.Command{
-	Use:   "compute-contract-addr deployer-address",
+	Use:   "compute-contract-addr <deployer-address>",
 	Short: "Compute contract address before deployment",
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {

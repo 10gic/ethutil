@@ -98,7 +98,7 @@ var eip712SignCmd = &cobra.Command{
 		}
 		eip712TypedDataJson, err := os.ReadFile(eip712TypedDataFile)
 
-		privateKey := buildPrivateKeyFromHex(globalOptPrivateKey)
+		privateKey := hexToPrivateKey(globalOptPrivateKey)
 		var sig []byte
 		sigV, sigR, sigS, err := eip712Sign(eip712TypedDataJson, privateKey)
 		checkErr(err)
