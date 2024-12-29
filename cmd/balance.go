@@ -16,6 +16,7 @@ import (
 var balanceSortOpt string
 var balanceUnit string
 var balanceInputFile string
+var balanceOnlyOutputWhenPositive bool
 
 const sortNo = "no"
 const sortAsc = "asc"
@@ -29,6 +30,7 @@ func init() {
 	balanceCmd.Flags().StringVarP(&balanceSortOpt, "sort", "s", "no", "no | asc | desc, sort result")
 	balanceCmd.Flags().StringVarP(&balanceUnit, "unit", "u", "ether", "wei | gwei | ether, unit of balance")
 	balanceCmd.Flags().StringVarP(&balanceInputFile, "input-file", "f", "", "read address from this file, file - means read stdin")
+	balanceCmd.Flags().BoolVarP(&balanceOnlyOutputWhenPositive, "only-positive", "", false, "only output addresses with positive balance")
 }
 
 func validationBalanceCmdOpts() bool {
@@ -107,7 +109,7 @@ var balanceCmd = &cobra.Command{
 		}
 
 		var results []kv
-		var finishOutput = false
+		var earlierOutput = false
 
 		if isMulticallDeployed(globalClient.EthClient) {
 			balances, err := queryEthBalancesByMulticall(addresses)
@@ -120,12 +122,19 @@ var balanceCmd = &cobra.Command{
 
 				// print output immediately if no sort demand
 				if balanceSortOpt == sortNo {
-					if globalOptTerseOutput {
-						fmt.Printf("%v %s\n", addr, wei2Other(bigIntToDecimal(balance), balanceUnit).String())
-					} else {
-						fmt.Printf("addr %v, balance %s %s\n", addr, wei2Other(bigIntToDecimal(balance), balanceUnit).String(), balanceUnit)
+					earlierOutput = true
+
+					if balanceOnlyOutputWhenPositive && balance.Sign() <= 0 {
+						// skip output when balance is zero or negative
+						continue
 					}
-					finishOutput = true
+					var output string
+					if globalOptTerseOutput {
+						output = fmt.Sprintf("%v %s\n", addr, wei2Other(bigIntToDecimal(balance), balanceUnit).String())
+					} else {
+						output = fmt.Sprintf("addr %v, balance %s %s\n", addr, wei2Other(bigIntToDecimal(balance), balanceUnit).String(), balanceUnit)
+					}
+					fmt.Print(output)
 				}
 			}
 		} else {
@@ -138,12 +147,19 @@ var balanceCmd = &cobra.Command{
 
 				// print output immediately if no sort demand
 				if balanceSortOpt == sortNo {
-					if globalOptTerseOutput {
-						fmt.Printf("%v %s\n", addr, wei2Other(bigIntToDecimal(balance), balanceUnit).String())
-					} else {
-						fmt.Printf("addr %v, balance %s %s\n", addr, wei2Other(bigIntToDecimal(balance), balanceUnit).String(), balanceUnit)
+					earlierOutput = true
+
+					if balanceOnlyOutputWhenPositive && balance.Sign() < 0 {
+						// skip output when balance is zero or negative
+						continue
 					}
-					finishOutput = true
+					var output string
+					if globalOptTerseOutput {
+						output = fmt.Sprintf("%v %s\n", addr, wei2Other(bigIntToDecimal(balance), balanceUnit).String())
+					} else {
+						output = fmt.Sprintf("addr %v, balance %s %s\n", addr, wei2Other(bigIntToDecimal(balance), balanceUnit).String(), balanceUnit)
+					}
+					fmt.Print(output)
 				}
 			}
 		}
@@ -158,15 +174,20 @@ var balanceCmd = &cobra.Command{
 			})
 		}
 
-		if !finishOutput {
+		if !earlierOutput {
 			for _, result := range results {
-				if globalOptTerseOutput {
-					fmt.Printf("%v %s\n", result.addr, wei2Other(bigIntToDecimal(&result.balance), balanceUnit).String())
-				} else {
-					fmt.Printf("addr %v, balance %s %s\n", result.addr, wei2Other(bigIntToDecimal(&result.balance), balanceUnit).String(), balanceUnit)
+				if balanceOnlyOutputWhenPositive && result.balance.Sign() < 0 {
+					// skip output when balance is zero or negative
+					continue
 				}
+				var output string
+				if globalOptTerseOutput {
+					output = fmt.Sprintf("%v %s\n", result.addr, wei2Other(bigIntToDecimal(&result.balance), balanceUnit).String())
+				} else {
+					output = fmt.Sprintf("addr %v, balance %s %s\n", result.addr, wei2Other(bigIntToDecimal(&result.balance), balanceUnit).String(), balanceUnit)
+				}
+				fmt.Print(output)
 			}
-			finishOutput = true
 		}
 	},
 }
