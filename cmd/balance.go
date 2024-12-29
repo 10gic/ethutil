@@ -149,7 +149,7 @@ var balanceCmd = &cobra.Command{
 				if balanceSortOpt == sortNo {
 					earlierOutput = true
 
-					if balanceOnlyOutputWhenPositive && balance.Sign() < 0 {
+					if balanceOnlyOutputWhenPositive && balance.Sign() <= 0 {
 						// skip output when balance is zero or negative
 						continue
 					}
@@ -176,7 +176,7 @@ var balanceCmd = &cobra.Command{
 
 		if !earlierOutput {
 			for _, result := range results {
-				if balanceOnlyOutputWhenPositive && result.balance.Sign() < 0 {
+				if balanceOnlyOutputWhenPositive && result.balance.Sign() <= 0 {
 					// skip output when balance is zero or negative
 					continue
 				}
