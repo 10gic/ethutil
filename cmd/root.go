@@ -134,59 +134,90 @@ func init() {
 	rootCmd.AddCommand(downloadSrcCmd)
 }
 
+func testRpcValid(rpcUrl string) error {
+	client, err := rpc.Dial(rpcUrl)
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
+	var result string
+	err = client.Call(&result, "eth_chainId")
+	return err
+}
+
+func findRpc(chainId string) (string, error) {
+	// Get rpc from https://chainid.network/chains_mini.json
+	resp, err := http.Get("https://chainid.network/chains_mini.json")
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	type respItem struct {
+		Name           string `json:"name"`
+		ChainId        uint64 `json:"chainId"`
+		ShortName      string `json:"shortName"`
+		NativeCurrency struct {
+			Symbol   string `json:"symbol"`
+			Decimals uint64 `json:"decimals"`
+		} `json:"nativeCurrency"`
+		Rpc     []string `json:"rpc"`
+		InfoUrl string   `json:"infoURL"`
+	}
+
+	var data []respItem
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		return "", err
+	}
+
+	var finalRpc = ""
+	for _, item := range data {
+		if strconv.Itoa(int(item.ChainId)) == chainId {
+			if item.NativeCurrency.Decimals != 18 {
+				return "", fmt.Errorf("only support chain with decimals 18, but %s is %d", globalOptChain, item.NativeCurrency.Decimals)
+			}
+
+			for _, nodeRpc := range item.Rpc {
+				if strings.Contains(nodeRpc, "${") {
+					// filter out rpc contains '${', for example, https://mainnet.infura.io/v3/${INFURA_API_KEY}
+					continue
+				}
+
+				err = testRpcValid(nodeRpc)
+				if err != nil {
+					log.Printf("Try to find another rpc for chain id %s as %s unavailable (%s)", chainId, finalRpc, err)
+					continue
+				}
+
+				finalRpc = nodeRpc
+			}
+			break
+		}
+	}
+
+	if finalRpc == "" {
+		return "", fmt.Errorf("chain %v is not supported", globalOptChain)
+	}
+
+	return finalRpc, nil
+}
+
 func initConfig() {
 	var err error
 
 	if !contains([]string{nodeMainnet, nodeSepolia, nodeSokol, nodeBsc}, globalOptChain) {
 		var chainId = globalOptChain
-		log.Printf("Query node rpc for chain %s", chainId)
+		log.Printf("Seaching rpc for chain id %s", chainId)
 
-		// Get rpc from https://chainid.network/chains_mini.json
-		resp, err := http.Get("https://chainid.network/chains_mini.json")
+		finalRpc, err := findRpc(chainId)
 		checkErr(err)
-		defer resp.Body.Close()
-		body, err := io.ReadAll(resp.Body)
-		checkErr(err)
-
-		type respItem struct {
-			Name           string `json:"name"`
-			ChainId        uint64 `json:"chainId"`
-			ShortName      string `json:"shortName"`
-			NativeCurrency struct {
-				Symbol   string `json:"symbol"`
-				Decimals uint64 `json:"decimals"`
-			} `json:"nativeCurrency"`
-			Rpc     []string `json:"rpc"`
-			InfoUrl string   `json:"infoURL"`
-		}
-
-		var data []respItem
-		err = json.Unmarshal(body, &data)
-		checkErr(err)
-
-		var finalRpc = ""
-		for _, item := range data {
-			if strconv.Itoa(int(item.ChainId)) == chainId {
-				if item.NativeCurrency.Decimals != 18 {
-					panic(fmt.Sprintf("Only support chain with decimals 18, but %s is %d", globalOptChain, item.NativeCurrency.Decimals))
-				}
-
-				// filter out rpc contains '${', for example, https://mainnet.infura.io/v3/${INFURA_API_KEY}
-				for _, nodeRpc := range item.Rpc {
-					if !strings.Contains(nodeRpc, "${") {
-						finalRpc = nodeRpc
-					}
-				}
-				break
-			}
-		}
-
-		if finalRpc == "" {
-			log.Printf("Chain %v is not supported", globalOptChain)
-			os.Exit(1)
-		}
-
-		log.Printf("Use node rpc %s", finalRpc)
+		log.Printf("Chain id %s use rpc %s", chainId, finalRpc)
 		globalOptNodeUrl = finalRpc
 	}
 
