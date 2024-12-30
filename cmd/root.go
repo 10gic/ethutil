@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -54,6 +55,10 @@ func InitGlobalClient(nodeUrl string) {
 		EthClient: ethclient.NewClient(rpcClient),
 		RpcClient: rpcClient,
 	}
+
+	chainId, err := globalClient.EthClient.ChainID(context.Background())
+	checkErr(err)
+	log.Printf("Connected to chain id %v", chainId)
 }
 
 const txTypeEip155 = "eip155"
@@ -202,7 +207,7 @@ func findRpc(chainId string) (string, error) {
 	}
 
 	if finalRpc == "" {
-		return "", fmt.Errorf("chain %v is not supported", globalOptChain)
+		return "", fmt.Errorf("Can not find any rpc for chain id %v", chainId)
 	}
 
 	return finalRpc, nil

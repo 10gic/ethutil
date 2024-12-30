@@ -17,6 +17,7 @@ var balanceSortOpt string
 var balanceUnit string
 var balanceInputFile string
 var balanceOnlyOutputWhenPositive bool
+var balanceAddressesBatchNumber int64
 
 const sortNo = "no"
 const sortAsc = "asc"
@@ -31,6 +32,7 @@ func init() {
 	balanceCmd.Flags().StringVarP(&balanceUnit, "unit", "u", "ether", "wei | gwei | ether, unit of balance")
 	balanceCmd.Flags().StringVarP(&balanceInputFile, "input-file", "f", "", "read address from this file, file - means read stdin")
 	balanceCmd.Flags().BoolVarP(&balanceOnlyOutputWhenPositive, "only-positive", "", false, "only output addresses with positive balance")
+	balanceCmd.Flags().Int64VarP(&balanceAddressesBatchNumber, "batch", "", 10000, "the batch number when constructing Multicall arguments")
 }
 
 func validationBalanceCmdOpts() bool {
@@ -87,9 +89,6 @@ var balanceCmd = &cobra.Command{
 			}
 		}
 
-		if len(addresses) > 10000 {
-			return fmt.Errorf("too many addresses (%v), can not exceed 10000", len(addresses))
-		}
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
@@ -97,7 +96,6 @@ var balanceCmd = &cobra.Command{
 			_ = cmd.Help()
 			os.Exit(1)
 		}
-		log.Printf("Current chain is %v", globalOptChain)
 
 		InitGlobalClient(globalOptNodeUrl)
 
@@ -112,32 +110,43 @@ var balanceCmd = &cobra.Command{
 		var earlierOutput = false
 
 		if isMulticallDeployed(globalClient.EthClient) {
-			balances, err := queryEthBalancesByMulticall(addresses)
-			checkErr(err)
+			for i := 0; i < len(addresses); i += int(balanceAddressesBatchNumber) {
+				end := i + int(balanceAddressesBatchNumber)
+				if end > len(addresses) {
+					end = len(addresses)
+				}
+				batch := addresses[i:end]
 
-			for index, balance := range balances {
-				addr := addresses[index]
+				balances, err := queryEthBalancesByMulticall(batch)
+				checkErr(err)
 
-				results = append(results, kv{addr, *balance})
+				for index, balance := range balances {
+					addr := batch[index]
 
-				// print output immediately if no sort demand
-				if balanceSortOpt == sortNo {
-					earlierOutput = true
+					results = append(results, kv{addr, *balance})
 
-					if balanceOnlyOutputWhenPositive && balance.Sign() <= 0 {
-						// skip output when balance is zero or negative
-						continue
+					// print output immediately if no sort demand
+					if balanceSortOpt == sortNo {
+						earlierOutput = true
+
+						if balanceOnlyOutputWhenPositive && balance.Sign() <= 0 {
+							// skip output when balance is zero or negative
+							continue
+						}
+						var output string
+						if globalOptTerseOutput {
+							output = fmt.Sprintf("%v %s\n", addr, wei2Other(bigIntToDecimal(balance), balanceUnit).String())
+						} else {
+							output = fmt.Sprintf("addr %v, balance %s %s\n", addr, wei2Other(bigIntToDecimal(balance), balanceUnit).String(), balanceUnit)
+						}
+						fmt.Print(output)
 					}
-					var output string
-					if globalOptTerseOutput {
-						output = fmt.Sprintf("%v %s\n", addr, wei2Other(bigIntToDecimal(balance), balanceUnit).String())
-					} else {
-						output = fmt.Sprintf("addr %v, balance %s %s\n", addr, wei2Other(bigIntToDecimal(balance), balanceUnit).String(), balanceUnit)
-					}
-					fmt.Print(output)
 				}
 			}
 		} else {
+			if len(addresses) > 1 {
+				log.Printf("Multicall contract is not deployed, query balance one by one")
+			}
 			for _, addr := range addresses {
 				// check balance one by one
 				balance, err := globalClient.EthClient.BalanceAt(ctx, common.HexToAddress(addr), nil)

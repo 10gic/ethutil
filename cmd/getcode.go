@@ -27,7 +27,6 @@ var getCodeCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		contractAddress := args[0]
-		log.Printf("Current chain is %v", globalOptChain)
 
 		InitGlobalClient(globalOptNodeUrl)
 
