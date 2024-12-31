@@ -38,7 +38,8 @@ var (
 		Short: "An Ethereum util, can transfer eth, check balance, call any contract function etc. All EVM-compatible chains are supported.",
 	}
 
-	globalClient *Client
+	globalClient  *Client
+	globalChainId string
 )
 
 type Client struct {
@@ -58,7 +59,8 @@ func InitGlobalClient(nodeUrl string) {
 
 	chainId, err := globalClient.EthClient.ChainID(context.Background())
 	checkErr(err)
-	log.Printf("Connected to chain id %v", chainId)
+	globalChainId = chainId.String()
+	log.Printf("Connected to chain id %v", globalChainId)
 }
 
 const txTypeEip155 = "eip155"
@@ -151,16 +153,16 @@ func testRpcValid(rpcUrl string) error {
 	return err
 }
 
-func findRpc(chainId string) (string, error) {
+func findRpc(chainId string) (string, string, error) {
 	// Get rpc from https://chainid.network/chains_mini.json
 	resp, err := http.Get("https://chainid.network/chains_mini.json")
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	type respItem struct {
@@ -178,14 +180,15 @@ func findRpc(chainId string) (string, error) {
 	var data []respItem
 	err = json.Unmarshal(body, &data)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	var finalRpc = ""
+	var chainName = ""
 	for _, item := range data {
 		if strconv.Itoa(int(item.ChainId)) == chainId {
 			if item.NativeCurrency.Decimals != 18 {
-				return "", fmt.Errorf("only support chain with decimals 18, but %s is %d", globalOptChain, item.NativeCurrency.Decimals)
+				return "", "", fmt.Errorf("only support chain with decimals 18, but %s is %d", globalOptChain, item.NativeCurrency.Decimals)
 			}
 
 			for _, nodeRpc := range item.Rpc {
@@ -196,21 +199,22 @@ func findRpc(chainId string) (string, error) {
 
 				err = testRpcValid(nodeRpc)
 				if err != nil {
-					log.Printf("Try to find another rpc for chain id %s as %s unavailable (%s)", chainId, finalRpc, err)
+					log.Printf("Try to find another rpc for chain id %s (%s), because %s unavailable (%s)", chainId, item.Name, nodeRpc, err)
 					continue
 				}
 
 				finalRpc = nodeRpc
+				chainName = item.Name
 			}
 			break
 		}
 	}
 
 	if finalRpc == "" {
-		return "", fmt.Errorf("Can not find any rpc for chain id %v", chainId)
+		return "", "", fmt.Errorf("Can not find any rpc for chain id %v", chainId)
 	}
 
-	return finalRpc, nil
+	return finalRpc, chainName, nil
 }
 
 func initConfig() {
@@ -220,9 +224,9 @@ func initConfig() {
 		var chainId = globalOptChain
 		log.Printf("Seaching rpc for chain id %s", chainId)
 
-		finalRpc, err := findRpc(chainId)
+		finalRpc, chainName, err := findRpc(chainId)
 		checkErr(err)
-		log.Printf("Chain id %s use rpc %s", chainId, finalRpc)
+		log.Printf("Chain id %s (%s) use rpc %s", chainId, chainName, finalRpc)
 		globalOptNodeUrl = finalRpc
 	}
 

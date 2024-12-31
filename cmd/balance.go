@@ -145,7 +145,7 @@ var balanceCmd = &cobra.Command{
 			}
 		} else {
 			if len(addresses) > 1 {
-				log.Printf("Multicall contract is not deployed, query balance one by one")
+				log.Printf("Multicall contract is not deployed on chain %s, query balance one by one", globalChainId)
 			}
 			for _, addr := range addresses {
 				// check balance one by one
