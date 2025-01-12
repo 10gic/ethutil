@@ -342,22 +342,15 @@ func BuildTx(client *ethclient.Client, privateKey *ecdsa.PrivateKey, fromAddress
 
 	gasLimit := globalOptGasLimit
 	if gasLimit == 0 { // if not specified
-		gasLimit = uint64(gasUsedByTransferEth)
-
-		if toAddress == nil {
-			gasLimit = 7000000 // the default gas limit for deploy contract, can be overwrite by option
-		} else {
-			isContract, err := isContractAddress(client, *toAddress)
-			if err != nil {
-				return nil, fmt.Errorf("isContractAddress fail: %w", err)
-			}
-			if isContract { // gasUsedByTransferEth may be not enough if send to contract
-				gasLimit = 2000000
-			}
-			if len(data) > 0 { // gasUsedByTransferEth may be not enough if with payload data
-				gasLimit = 2000000
-			}
+		estimateGasLimit, err := client.EstimateGas(context.Background(), ethereum.CallMsg{
+			To:    toAddress,
+			Value: amount,
+			Data:  data,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("EstimateGas fail: %w", err)
 		}
+		gasLimit = estimateGasLimit
 	}
 
 	var tx *types.Transaction

@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/ethereum/go-ethereum"
 	"log"
 	"math/big"
 	"os"
@@ -46,8 +47,6 @@ func validationTransferCmdOpts() bool {
 
 // https://docs.optimism.io/builders/tools/build/oracles#gas-oracle
 var l1GasPriceOracle = common.HexToAddress("0x420000000000000000000000000000000000000F")
-
-const gasUsedByTransferEth = 21000 // The gas used by ETH transfer tx is 21000
 
 func getGasPrice(client *ethclient.Client) (*big.Int, error) {
 	var gasPrice *big.Int
@@ -138,7 +137,16 @@ var transferCmd = &cobra.Command{
 			var gasLimit = globalOptGasLimit
 			if globalOptGasLimit == 0 {
 				// If globalOptGasLimit is not specified, use the default value gasUsedByTransferEth
-				gasLimit = gasUsedByTransferEth
+				toAddr := common.HexToAddress(targetAddress)
+				estimateGasLimit, err := globalClient.EthClient.EstimateGas(context.Background(), ethereum.CallMsg{
+					To:    &toAddr,
+					Value: big.NewInt(0),
+					Data:  common.FromHex(transferHexData),
+				})
+				if err != nil {
+					log.Fatalf("EstimateGas fail: %w", err)
+				}
+				gasLimit = estimateGasLimit
 			}
 			gasMayUsed := big.NewInt(0).Mul(gasPrice, big.NewInt(int64(gasLimit)))
 
