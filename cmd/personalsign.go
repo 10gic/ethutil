@@ -33,9 +33,16 @@ var personalSignCmd = &cobra.Command{
 // See: https://eips.ethereum.org/EIPS/eip-191
 // The signature data can be verified in https://etherscan.io/verifiedSignatures
 func personalSign(message []byte, privateKey *ecdsa.PrivateKey) ([]byte, error) {
+	if len(message) > 2 && string(message[:2]) == "0x" {
+		if decodedMessage, err := hexutil.Decode(string(message)); err == nil {
+			message = decodedMessage
+		}
+	}
+
 	fullMessage := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(message), message)
 	// log.Printf("fullMessage: %s", fullMessage)
 	hash := crypto.Keccak256Hash([]byte(fullMessage))
+	log.Printf("pre hash %s", hash.Hex())
 	signatureBytes, err := crypto.Sign(hash.Bytes(), privateKey)
 	if err != nil {
 		return nil, err
