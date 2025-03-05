@@ -84,6 +84,11 @@ Transfer 1 ETH to 0xB2aC853cF815B47903bc19BF4860540306F4f944:
 $ ethutil --chain mainnet transfer 0xB2aC853cF815B47903bc19BF4860540306F4f944 1 --private-key 0xXXXX
 ```
 
+Transfer all remaining ETH to 0xB2aC853cF815B47903bc19BF4860540306F4f944:
+```shell
+$ ethutil --chain mainnet transfer 0xB2aC853cF815B47903bc19BF4860540306F4f944 all --private-key 0xXXXX
+```
+
 ## Contract Interaction
 Invokes the (paid) contract method:
 ```shell

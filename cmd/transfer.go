@@ -125,6 +125,10 @@ var transferCmd = &cobra.Command{
 		var amount decimal.Decimal
 		var amountInWei decimal.Decimal
 		if transferAmt == "all" {
+			// Note: We always use EIP155 for transfer all balance
+			// Because we need to pay for gas, and we need to know the exact balance excluding gas fee
+			globalOptTxType = txTypeEip155
+
 			// transfer all balance (only reserve some gas just pay for this tx) to target address
 			fromAddr := extractAddressFromPrivateKey(hexToPrivateKey(globalOptPrivateKey))
 
