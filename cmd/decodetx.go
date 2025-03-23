@@ -35,6 +35,19 @@ var decodeTxCmd = &cobra.Command{
 			rawTxHexData = rawTxHexData[2:] // remove leading 0x
 		}
 
+		if len(rawTxHexData) == 64 {
+			// If only tx hash is provided, try to get raw tx data from tx hash
+			InitGlobalClient(globalOptNodeUrl)
+			rawTx, err := GetRawTx(globalClient.RpcClient, "0x"+rawTxHexData)
+			if err != nil {
+				fmt.Printf("get raw tx failed: %v\n", err)
+				return
+			}
+
+			fmt.Printf("rax tx = %s\n", rawTx)
+			rawTxHexData = rawTx[2:] // remove leading 0x
+		}
+
 		var firstHex = rawTxHexData[0:2]
 		transactionType, err := strconv.ParseInt(firstHex, 16, 64)
 		checkErr(err)

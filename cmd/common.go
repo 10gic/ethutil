@@ -295,6 +295,21 @@ func GenRawTx(signedTx *types.Transaction) (string, error) {
 	return hexutil.Encode(data), nil
 }
 
+// GetRawTx get raw tx from rpc node
+func GetRawTx(rpcClient *rpc.Client, txHash string) (string, error) {
+	if !has0xPrefix(txHash) {
+		// Add 0x prefix, as eth_getRawTransactionByHash need it
+		txHash = "0x" + txHash
+	}
+	var result hexutil.Bytes
+	err := rpcClient.CallContext(context.Background(), &result, "eth_getRawTransactionByHash", txHash)
+	if err != nil {
+		return "", err
+	}
+
+	return hexutil.Encode(result), nil
+}
+
 // SendSignedTx broadcast signed tx and return tx returned by rpc node
 func SendSignedTx(rpcClient *rpc.Client, signedTx *types.Transaction) (*common.Hash, error) {
 	rawTx, err := GenRawTx(signedTx)
