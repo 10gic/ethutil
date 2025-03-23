@@ -16,7 +16,7 @@ Available Commands:
   deploy                Deploy contract
   deploy-erc20          Deploy an ERC20 token
   drop-tx               Drop pending tx for address
-  4byte                 Get the function signatures for the given selector from https://openchain.xyz/signatures
+  4byte                 Get the function signatures for the given selector from https://openchain.xyz/signatures or https://www.4byte.directory
   encode-param          Encode input arguments, it's useful when you call contract's method manually
   gen-key               Generate eth mnemonic words, private key, and its address
   dump-address          Dump address from mnemonics or private key or public key

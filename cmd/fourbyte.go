@@ -2,20 +2,22 @@ package cmd
 
 import (
 	"fmt"
-	"log"
-	"strings"
-
 	"github.com/spf13/cobra"
+	"log"
 )
 
 var fourByteCmd = &cobra.Command{
 	Use:   "4byte <func-selector>",
-	Short: "Get the function signatures for the given selector from https://openchain.xyz/signatures",
+	Short: "Get the function signatures for the given selector from https://openchain.xyz/signatures or https://www.4byte.directory",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		var funcHash = args[0]
-		if !strings.HasPrefix(funcHash, "0x") {
-			log.Fatalf("func-selector must starts with 0x")
+		if !isValidHexString(funcHash) {
+			log.Fatalf("func-selector must be hex string")
+		}
+		// Add 0x prefix if not present, for example, change 8c905368 to 0x8c905368
+		if len(funcHash) == 8 && funcHash[0:2] != "0x" {
+			funcHash = "0x" + funcHash
 		}
 
 		funcSig, err := GetFuncSig(funcHash)

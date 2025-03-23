@@ -774,6 +774,15 @@ func RecoverPubkey(v, r, s *big.Int, msg []byte) ([]byte, error) {
 }
 
 // GetFuncSig recover function signature from 4 bytes hash
+func GetFuncSig(funcHash string) ([]string, error) {
+	sigs, err := GetFuncSigFromOpenchain(funcHash)
+	if err != nil || len(sigs) == 0 {
+		sigs, err = GetFuncSigFrom4Byte(funcHash)
+	}
+	return sigs, err
+}
+
+// GetFuncSig recover function signature from 4 bytes hash
 // For example:
 //
 //	param: "0x8c905368"
@@ -783,7 +792,7 @@ func RecoverPubkey(v, r, s *big.Int, msg []byte) ([]byte, error) {
 // $ curl -X 'GET' 'https://api.openchain.xyz/signature-database/v1/lookup?function=0x8c905368&filter=true'
 // {"ok":true,"result":{"event":{},"function":{"0x8c905368":[{"name":"NotEnoughFunds(uint256,uint256)","filtered":false}]}}}
 // See https://openchain.xyz/signatures
-func GetFuncSig(funcHash string) ([]string, error) {
+func GetFuncSigFromOpenchain(funcHash string) ([]string, error) {
 	var url = fmt.Sprintf("https://api.openchain.xyz/signature-database/v1/lookup?function=%s&filter=true", funcHash)
 	resp, err := http.Get(url)
 	if err != nil {
@@ -815,6 +824,70 @@ func GetFuncSig(funcHash string) ([]string, error) {
 		rc = append(rc, data.Name)
 	}
 
+	return rc, nil
+}
+
+// GetFuncSigFrom4Byte recover function signature from 4 bytes hash from 4byte API
+// For example:
+//
+//	param: "0x8c905368"
+//	return: ["NotEnoughFunds(uint256,uint256)"]
+//
+// This function uses 4byte API
+// $ curl -X 'GET' 'https://www.4byte.directory/api/v1/signatures/?hex_signature=0x275fb869'
+//
+//	{
+//	 "count": 1,
+//	 "next": null,
+//	 "previous": null,
+//	 "results": [
+//	   {
+//	     "id": 1136703,
+//	     "created_at": "2025-03-22T17:59:30.142145Z",
+//	     "text_signature": "InsufficientSlippage(uint256,uint256)",
+//	     "hex_signature": "0x275fb869",
+//	     "bytes_signature": "'_¸i"
+//	   }
+//	 ]
+//	}
+//
+// See https://www.4byte.directory/docs/
+func GetFuncSigFrom4Byte(funcHash string) ([]string, error) {
+	var url = fmt.Sprintf("https://www.4byte.directory/api/v1/signatures/?hex_signature=%s", funcHash)
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	type respMsg struct {
+		Count  uint64 `json:"count"`
+		Result []struct {
+			ID             uint64 `json:"id"`
+			CreatedAt      string `json:"created_at"`
+			TextSignature  string `json:"text_signature"`
+			HexSignature   string `json:"hex_signature"`
+			BytesSignature string `json:"bytes_signature"`
+		} `json:"results"`
+	}
+	var data respMsg
+	if err := json.Unmarshal(body, &data); err != nil {
+		return nil, err
+	}
+
+	var rc []string
+	if data.Count == 0 {
+		// not found
+		return rc, nil
+	}
+
+	for _, data := range data.Result {
+		rc = append(rc, data.TextSignature)
+	}
 	return rc, nil
 }
 
