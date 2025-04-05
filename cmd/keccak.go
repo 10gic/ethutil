@@ -10,45 +10,52 @@ import (
 	"os"
 )
 
-var keccakBinaryModeOpt bool
+var keccakHexModeOpt bool
 
 func init() {
-	keccakCmd.Flags().BoolVarP(&keccakBinaryModeOpt, "binary", "b", false, "read in binary mode, default is text mode")
+	keccakCmd.Flags().BoolVarP(&keccakHexModeOpt, "hex", "", false, "read in hex string mode, default is text mode")
 }
 
 var keccakCmd = &cobra.Command{
-	Use:   "keccak [flags] <file> ...",
-	Short: "Compute keccak hash, read data from file or stdin (file name -)",
+	Use:   "keccak [flags] <data> ...",
+	Short: "Compute keccak hash of data. If data is a existing file, compute the hash of the file content",
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) == 0 {
-			// if no file specified, read from stdin
-			computeAndOutputKeccak("-")
-			return
-		}
-
-		for _, fil := range args {
-			computeAndOutputKeccak(fil)
-		}
+		finalData := getFinalData(args[0])
+		fmt.Printf("%v\n", hexutil.Encode(crypto.Keccak256(finalData))[2:])
 	},
 }
 
-func computeAndOutputKeccak(f string) {
-	var fileContent []byte
+func getFinalData(data string) []byte {
+	var content []byte
 	var err error
 
-	if f == "-" {
-		fileContent, err = io.ReadAll(os.Stdin)
+	if fileExists(data) {
+		content, err = os.ReadFile(data)
+		checkErr(err)
+	} else if data == "-" {
+		content, err = io.ReadAll(os.Stdin)
 		checkErr(err)
 	} else {
-		fileContent, err = os.ReadFile(f)
+		content = []byte(data)
+	}
+
+	// hex string mode
+	if keccakHexModeOpt {
+		if len(content) > 0 && content[0] == '0' && content[1] == 'x' {
+			content = content[2:]
+		}
+		content, err = hex.DecodeString(string(content))
 		checkErr(err)
 	}
 
-	// binary mode
-	if keccakBinaryModeOpt {
-		fileContent, err = hex.DecodeString(string(fileContent))
-		checkErr(err)
-	}
+	return content
+}
 
-	fmt.Printf("%v  %v\n", hexutil.Encode(crypto.Keccak256(fileContent))[2:], f)
+func fileExists(filename string) bool {
+	_, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return err == nil
 }
