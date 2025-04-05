@@ -3,13 +3,14 @@ package cmd
 import (
 	"encoding/hex"
 	"fmt"
-	"strconv"
-	"strings"
-
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/spf13/cobra"
+	"golang.org/x/crypto/sha3"
+	"strconv"
+	"strings"
 )
 
 var decodeTxCmd = &cobra.Command{
@@ -122,8 +123,10 @@ func decodeEip2718(transactionType int, transactionPayload string) {
 	case 2:
 		// EIP-1559
 		decodeEip1559(transactionType, transactionPayload)
+	case 4:
+		decodeEip7702(transactionType, transactionPayload)
 	default:
-		panic("not implemented for this transaction type")
+		panic(fmt.Sprintf("not implemented for this transaction type %v", transactionType))
 	}
 }
 
@@ -251,4 +254,120 @@ func decodeEip1559(transactionType int, transactionPayload string) {
 	// extract address from ecdsa.PublicKey
 	addr := crypto.PubkeyToAddress(*pubkey)
 	fmt.Printf("sender = %s\n", addr.Hex())
+}
+
+func decodeEip7702(transactionType int, transactionPayload string) {
+	var setCodeTx *types.SetCodeTx
+	rawTxBytes, _ := hex.DecodeString(transactionPayload)
+	err := rlp.DecodeBytes(rawTxBytes, &setCodeTx)
+	if err != nil {
+		panic("rlp decode failed, may not a valid eth raw transaction")
+	}
+
+	fmt.Printf("basic info:\n")
+	fmt.Printf("type = eip7702, i.e. TxnType = %v\n", transactionType)
+	fmt.Printf("chainId = %s (0x%s)\n", setCodeTx.ChainID.String(), hex.EncodeToString(setCodeTx.ChainID.Bytes()))
+	fmt.Printf("nonce = %d (0x%x)\n", setCodeTx.Nonce, setCodeTx.Nonce)
+	fmt.Printf("maxPriorityFeePerGas = %s (0x%s), i.e. %s Gwei\n", setCodeTx.GasTipCap.String(), hex.EncodeToString(setCodeTx.GasTipCap.Bytes()), wei2Other(bigIntToDecimal(setCodeTx.GasTipCap.ToBig()), unitGwei).String())
+	fmt.Printf("maxFeePerGas = %s (0x%s), i.e. %s Gwei\n", setCodeTx.GasFeeCap.String(), hex.EncodeToString(setCodeTx.GasFeeCap.Bytes()), wei2Other(bigIntToDecimal(setCodeTx.GasFeeCap.ToBig()), unitGwei).String())
+	fmt.Printf("gasLimit = %d (0x%x)\n", setCodeTx.Gas, setCodeTx.Gas)
+	fmt.Printf("to = %s\n", setCodeTx.To.String())
+	fmt.Printf("value = %s (0x%s)\n", setCodeTx.Value.String(), hex.EncodeToString(setCodeTx.Value.Bytes()))
+	fmt.Printf("data (hex) = %x\n", setCodeTx.Data)
+	printEip7702AuthList(setCodeTx.AuthList)
+	fmt.Printf("accessList = %v\n", setCodeTx.AccessList)
+	fmt.Printf("yParity (ecdsa recovery id) = %s (0x%s)\n", setCodeTx.V, hex.EncodeToString(setCodeTx.V.Bytes()))
+	fmt.Printf("r (hex) = %064x\n", setCodeTx.R)
+	fmt.Printf("s (hex) = %064x\n", setCodeTx.S)
+
+	fmt.Printf("\n")
+	fmt.Printf("derived info:\n")
+	// fmt.Printf("hash before ecdsa sign (hex) = %x\n", setCodeTx.)
+
+	tx := types.NewTx(setCodeTx)
+	fmt.Printf("txid (hex) = %x\n", tx.Hash().Bytes())
+
+	// build msg (hash of data) before sign
+	singer := types.NewPragueSigner(setCodeTx.ChainID.ToBig())
+	hash := singer.Hash(tx)
+	fmt.Printf("hash before ecdsa sign (hex) = %x\n", hash.Bytes())
+
+	pubkeyBytes, err := RecoverPubkey(setCodeTx.V.ToBig(), setCodeTx.R.ToBig(), setCodeTx.S.ToBig(), hash.Bytes())
+	checkErr(err)
+	fmt.Printf("uncompressed public key of sender (hex) = %x\n", pubkeyBytes)
+
+	// convert uncompressed public key to ecdsa.PublicKey
+	pubkey, err := crypto.UnmarshalPubkey(pubkeyBytes)
+	checkErr(err)
+
+	// extract address from ecdsa.PublicKey
+	addr := crypto.PubkeyToAddress(*pubkey)
+	fmt.Printf("sender = %s\n", addr.Hex())
+}
+
+func printEip7702AuthList(authList []types.SetCodeAuthorization) {
+	fmt.Printf("======================================== EIP7702 authList Begin ========================================\n")
+	for _, auth := range authList {
+		fmt.Printf("chainId = %s (0x%s)\n", auth.ChainID.String(), hex.EncodeToString(auth.ChainID.Bytes()))
+		fmt.Printf("address (delegation designator) = %s\n", auth.Address.String())
+		fmt.Printf("nonce = %d (0x%x)\n", auth.Nonce, auth.Nonce)
+		fmt.Printf("yParity (ecdsa recovery id) = %d (0x%x)\n", auth.V, auth.V)
+		fmt.Printf("r (hex) = %064x\n", &auth.R)
+		fmt.Printf("s (hex) = %064x\n", &auth.S)
+		fmt.Printf("authorityAddress (derived from signature) = %s\n", recoverAuthority(auth).Hex())
+	}
+	fmt.Printf("======================================== EIP7702 authList End   ========================================\n")
+}
+
+func recoverAuthority(auth types.SetCodeAuthorization) common.Address {
+	sighash := sigHash(auth)
+
+	// Create ECDSA signature in [R || S || V] format
+	signature := make([]byte, 65)
+	rBytes := auth.R.Bytes()
+	sBytes := auth.S.Bytes()
+
+	// Pad R and S to 32 bytes each
+	copy(signature[32-len(rBytes):32], rBytes)
+	copy(signature[64-len(sBytes):64], sBytes)
+
+	// Set recovery ID as the last byte
+	signature[64] = auth.V
+
+	pubkeyBytes, err := crypto.Ecrecover(sighash[:], signature)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("authorityPubKey (derived from signature) = %x\n", pubkeyBytes)
+
+	// convert uncompressed public key to ecdsa.PublicKey
+	pubkey, err := crypto.UnmarshalPubkey(pubkeyBytes)
+	checkErr(err)
+
+	return crypto.PubkeyToAddress(*pubkey)
+}
+
+// sigHash calculates the pre signature hash for a SetCodeAuthorization.
+func sigHash(auth types.SetCodeAuthorization) common.Hash {
+	// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-7702.md#parameters
+	MAGIC := byte(0x05)
+	return prefixedRlpHash(MAGIC, []any{
+		auth.ChainID,
+		auth.Address,
+		auth.Nonce,
+	})
+}
+
+// prefixedRlpHash writes the prefix into the hasher before rlp-encoding x.
+// It's used for typed transactions.
+func prefixedRlpHash(prefix byte, x interface{}) common.Hash {
+	sha := sha3.NewLegacyKeccak256()
+	sha.Reset()
+	sha.Write([]byte{prefix})
+	err := rlp.Encode(sha, x)
+	if err != nil {
+		panic(err)
+	}
+	result := sha.Sum(nil)
+	return common.BytesToHash(result)
 }
