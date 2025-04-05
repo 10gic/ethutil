@@ -587,6 +587,11 @@ func getEIP1559GasPrice(client *ethclient.Client) (*big.Int, *big.Int, error) {
 
 // getEIP1559GasPriceByFeeHistory returns maxFeePerGasEstimate and maxPriorityFeePerGasEstimate
 func getEIP1559GasPriceByFeeHistory(client *ethclient.Client) (*big.Int, *big.Int, error) {
+	header, err := client.HeaderByNumber(context.Background(), nil)
+	if err != nil {
+		return nil, nil, fmt.Errorf("HeaderByNumber failed: %w", err)
+	}
+
 	var maxFeePerGasEstimate = new(big.Int)
 	var maxPriorityFeePerGasEstimate = new(big.Int)
 
@@ -645,6 +650,14 @@ func getEIP1559GasPriceByFeeHistory(client *ethclient.Client) (*big.Int, *big.In
 	//slow.Add(&slow, feeHistory.Reward[2][0])
 	//slow.Div(&slow, big.NewInt(3))
 
+	// log.Printf("feeHistory = %+v", feeHistory)
+
+	if len(feeHistory.Reward) == 1 {
+		maxPriorityFeePerGasEstimate = feeHistory.Reward[0][2] // Use the fastest value (95 percentile)
+		maxFeePerGasEstimate = maxFeePerGasEstimate.Add(header.BaseFee, maxPriorityFeePerGasEstimate)
+		return maxFeePerGasEstimate, maxPriorityFeePerGasEstimate, nil
+	}
+
 	var average big.Int
 	average.Add(feeHistory.Reward[0][1], feeHistory.Reward[1][1])
 	average.Add(&average, feeHistory.Reward[2][1])
@@ -659,10 +672,6 @@ func getEIP1559GasPriceByFeeHistory(client *ethclient.Client) (*big.Int, *big.In
 	maxPriorityFeePerGasEstimate = &average
 	// log.Printf("maxPriorityFeePerGasEstimate = %v", maxPriorityFeePerGasEstimate.String())
 
-	header, err := client.HeaderByNumber(context.Background(), nil)
-	if err != nil {
-		return nil, nil, fmt.Errorf("HeaderByNumber failed: %w", err)
-	}
 	maxFeePerGasEstimate = maxFeePerGasEstimate.Add(header.BaseFee, maxPriorityFeePerGasEstimate)
 	// log.Printf("maxFeePerGasEstimate = %v", maxFeePerGasEstimate.String())
 
