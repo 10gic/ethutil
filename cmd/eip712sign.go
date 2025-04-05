@@ -139,13 +139,16 @@ func computePreHash(typedData apitypes.TypedData) (hash common.Hash, err error) 
 	if err != nil {
 		return
 	}
+	log.Printf("domainSeparator: %s", domainSeparator)
 
 	typedDataHash, err := typedData.HashStruct(typedData.PrimaryType, typedData.Message)
 	if err != nil {
 		return
 	}
+	log.Printf("hashStruct(message): %s", typedDataHash)
 
 	rawData := []byte(fmt.Sprintf("\x19\x01%s%s", string(domainSeparator), string(typedDataHash)))
 	hash = common.BytesToHash(crypto.Keccak256(rawData))
+	log.Printf("EIP712 pre hash, i.e. Keccak256(0x1901 ‖ domainSeparator ‖ hashStruct(message)): %s", hash.Hex())
 	return
 }
