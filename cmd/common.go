@@ -140,6 +140,22 @@ func bigIntToDecimal(x *big.Int) decimal.Decimal {
 	return decimal.NewFromBigInt(x, 0)
 }
 
+// ParseBigInt parses input string to big.Int.
+func ParseBigInt(input string) (*big.Int, error) {
+	if has0xPrefix(input) {
+		// Hex string
+		return hexutil.DecodeBig(input)
+	} else {
+		// Decimal
+		n := new(big.Int)
+		n, ok := n.SetString(input, 10)
+		if !ok {
+			return nil, fmt.Errorf("parse big int failed: %s", input)
+		}
+		return n, nil
+	}
+}
+
 // hexToPrivateKey builds ecdsa.PrivateKey from hex string (the leading 0x is optional),
 // it would panic if input an invalid hex string.
 func hexToPrivateKey(privateKeyHex string) *ecdsa.PrivateKey {

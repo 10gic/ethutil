@@ -9,30 +9,32 @@ Usage:
   ethutil [command]
 
 Available Commands:
-  balance               Check eth balance for address
-  transfer              Transfer native token
-  call                  Invoke the (paid) contract method
-  query                 Invoke the (constant) contract method
-  deploy                Deploy contract
-  deploy-erc20          Deploy an ERC20 token
-  drop-tx               Drop pending tx for address
-  4byte                 Get the function signatures for the given selector from https://openchain.xyz/signatures or https://www.4byte.directory
-  encode-param          Encode input arguments, it's useful when you call contract's method manually
-  gen-key               Generate eth mnemonic words, private key, and its address
-  dump-address          Dump address from mnemonics or private key or public key
-  compute-contract-addr Compute contract address before deployment
-  build-raw-tx          Build raw transaction, the output can be used by rpc eth_sendRawTransaction
-  broadcast-tx          Broadcast tx by rpc eth_sendRawTransaction
-  decode-tx             Decode raw transaction
-  code                  Get runtime bytecode of a contract on the blockchain
-  erc20                 Call ERC20 contract, a helper for subcommand call/query
-  keccak                Compute keccak hash, read data from file or stdin (file name -)
-  personal-sign         Create EIP191 personal sign
-  eip712-sign           Create EIP712 sign
-  aa-simple-account     AA (EIP4337) simple account, owned by an EOA account
-  download-src          Download source code of contract from block explorer platform, eg. etherscan.
-  help                  Help about any command
-  completion            Generate the autocompletion script for the specified shell
+  balance                 Check eth balance for address
+  transfer                Transfer native token
+  call                    Invoke the (paid) contract method
+  query                   Invoke the (constant) contract method
+  deploy                  Deploy contract
+  deploy-erc20            Deploy an ERC20 token
+  drop-tx                 Drop pending tx for address
+  4byte                   Get the function signatures for the given selector from https://openchain.xyz/signatures or https://www.4byte.directory
+  encode-param            Encode input arguments, it's useful when you call contract's method manually
+  gen-key                 Generate eth mnemonic words, private key, and its address
+  dump-address            Dump address from mnemonics or private key or public key
+  compute-contract-addr   Compute contract address before deployment
+  build-raw-tx            Build raw transaction, the output can be used by rpc eth_sendRawTransaction
+  broadcast-tx            Broadcast tx by rpc eth_sendRawTransaction
+  decode-tx               Decode raw transaction
+  code                    Get runtime bytecode of a contract on the blockchain, or EIP-7702 EOA code.
+  erc20                   Call ERC20 contract, a helper for subcommand call/query
+  keccak                  Compute keccak hash of data. If data is a existing file, compute the hash of the file content
+  personal-sign           Create EIP191 personal sign
+  eip712-sign             Create EIP712 sign
+  aa-simple-account       AA (EIP4337) simple account, owned by an EOA account
+  download-src            Download source code of contract from block explorer platform, eg. etherscan.
+  eip7702-set-eoa-code    Set EOA account code, see EIP-7702. Just use 0x0000000000000000000000000000000000000000 when you want to clear the code.
+  eip7702-sign-auth-tuple Sign EIP-7702 authorization tuple, see EIP-7702.
+  help                    Help about any command
+  completion              Generate the autocompletion script for the specified shell
 
 Flags:
       --chain string                      mainnet | sepolia | sokol | bsc. This parameter can be set as the chain ID, in this case the rpc comes from https://chainid.network/chains_mini.json (default "sepolia")
@@ -297,8 +299,10 @@ $ ethutil --chain mainnet --private-key 0xXXXX erc20 0xdac17f958d2ee523a22062069
 
 ## Compute keccak hash
 ```shell
-$ echo -n "abc" | ethutil keccak -
-4e03657aea45a94fc7d47ba826c8d667c0d1e6e33a64a036ec44f58fa12d6c45  -
+$ ethutil keccak hello
+1c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac8
+$ ethutil keccak --hex 0xabcdef
+800d501693feda2226878e1ec7869eef8919dbc5bd10c2bcd031b94d73492860
 ```
 
 ## Download source of verified contract
@@ -306,6 +310,17 @@ $ echo -n "abc" | ethutil keccak -
 $ ethutil --chain mainnet download-src 0xdac17f958d2ee523a2206206994597c13d831ec7 -d output
 2021/12/12 21:25:44 Current chain is mainnet
 2021/12/12 21:25:45 saving output/TetherToken.sol
+```
+
+## Set EOA code (EIP-7702)
+```shell
+$ ethutil eip7702-set-eoa-code 0x2Ed852F7F064E56aa60fDA0a703ed4A7DCC5F9fb --private-key 0xXXXX # set code for EOA
+$ ethutil eip7702-set-eoa-code 0x0000000000000000000000000000000000000000 --private-key 0xXXXX # clear code for EOA
+```
+
+## Sign EIP-7702 authorization tuple
+```shell
+$ ethutil eip7702-sign-auth-tuple 17000 0x2Ed852F7F064E56aa60fDA0a703ed4A7DCC5F9fb 1 --private-key 0xXXXX # Sign <chain-id> <delegate-to> <nonce> 
 ```
 
 # Known Issue

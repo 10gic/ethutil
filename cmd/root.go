@@ -139,6 +139,8 @@ func init() {
 	rootCmd.AddCommand(eip712SignCmd)
 	rootCmd.AddCommand(aaSimpleAccountCmd)
 	rootCmd.AddCommand(downloadSrcCmd)
+	rootCmd.AddCommand(eip7702SetEoaCodeCmd)
+	rootCmd.AddCommand(eip7702SignAuthTupleCmd)
 }
 
 func testRpcValid(rpcUrl string) error {

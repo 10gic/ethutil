@@ -84,21 +84,6 @@ func buildUserOpForEstimateGas(callData []byte) (userop.UserOperation, error) {
 	return uo, nil
 }
 
-func ParseBigInt(input string) (*big.Int, error) {
-	if has0xPrefix(input) {
-		// Hex string
-		return hexutil.DecodeBig(input)
-	} else {
-		// Decimalist
-		n := new(big.Int)
-		n, ok := n.SetString(input, 10)
-		if !ok {
-			return nil, fmt.Errorf("parse big int failed: %s", input)
-		}
-		return n, nil
-	}
-}
-
 func GetSender() common.Address {
 	if aaSender != "" {
 		return common.HexToAddress(aaSender)
