@@ -338,6 +338,7 @@ func recoverAuthority(auth types.SetCodeAuthorization) common.Address {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Printf("sighash = %x\n", sighash[:])
 	fmt.Printf("authorityPubKey (derived from signature) = %x\n", pubkeyBytes)
 
 	// convert uncompressed public key to ecdsa.PublicKey
