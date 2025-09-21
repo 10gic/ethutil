@@ -1,6 +1,8 @@
 # ethutil
 An Ethereum util, can transfer eth, check balance, call any contract function etc. All EVM-compatible chains are supported.
 
+You can also try another project foundry ([cast](https://github.com/foundry-rs/foundry#cast)) , which has very rich functionality. (When I created this project, the foundry project didn't exist yet.)
+
 # Documentation
 ```txt
 An Ethereum util, can transfer eth, check balance, call any contract function etc. All EVM-compatible chains are supported.
@@ -33,6 +35,7 @@ Available Commands:
   download-src            Download source code of contract from block explorer platform, eg. etherscan.
   eip7702-set-eoa-code    Set EOA account code, see EIP-7702. Just use 0x0000000000000000000000000000000000000000 when you want to clear the code.
   eip7702-sign-auth-tuple Sign EIP-7702 authorization tuple, see EIP-7702.
+  public-rpc              Show public RPC endpoints for a chain
   help                    Help about any command
   completion              Generate the autocompletion script for the specified shell
 
@@ -321,6 +324,30 @@ $ ethutil eip7702-set-eoa-code 0x0000000000000000000000000000000000000000 --priv
 ## Sign EIP-7702 authorization tuple
 ```shell
 $ ethutil eip7702-sign-auth-tuple 17000 0x2Ed852F7F064E56aa60fDA0a703ed4A7DCC5F9fb 1 --private-key 0xXXXX # Sign <chain-id> <delegate-to> <nonce> 
+```
+
+## Get Public RPC Endpoints
+```shell
+$ ethutil public-rpc 1
+Chain: Ethereum Mainnet (ID: 1)
+RPC Endpoints:
+
+✅ https://eth.llamarpc.com
+   Block Height: 23409763
+   Client Version: rpc-proxy
+   Response Time: 350.804209ms
+   Tracking: none
+
+❌ https://go.getblock.io/aefd01aa907c4805ba3c00a9e5b48c6b
+   Error: eth_blockNumber failed: 429 Too Many Requests
+
+✅ https://eth-mainnet.nodereal.io/v1/1659dfb40aa24bbb8153a677b98064d7
+   Block Height: 23409763
+   Client Version: Geth/v1.15.10-stable-62528dbf/linux-amd64/go1.24.2
+   Response Time: 359.504ms
+   Tracking: yes
+
+......
 ```
 
 # Known Issue
