@@ -6,8 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/tyler-smith/go-bip32"
-	"github.com/tyler-smith/go-bip39"
 	"io"
 	"log"
 	"math/big"
@@ -25,6 +23,8 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/shopspring/decimal"
+	"github.com/tyler-smith/go-bip32"
+	"github.com/tyler-smith/go-bip39"
 )
 
 var ethBip44Path = "m/44'/60'/0'/0/0"
@@ -354,15 +354,15 @@ func BuildTx(client *ethclient.Client, privateKey *ecdsa.PrivateKey, fromAddress
 ) (*types.Transaction, error) {
 	var nonce uint64
 	var err error
+	var account common.Address
+
+	if privateKey != nil {
+		account = extractAddressFromPrivateKey(privateKey)
+	} else {
+		account = *fromAddress
+	}
+
 	if globalOptNonce < 0 {
-
-		var account common.Address
-		if privateKey != nil {
-			account = extractAddressFromPrivateKey(privateKey)
-		} else {
-			account = *fromAddress
-		}
-
 		nonce, err = client.PendingNonceAt(context.Background(), account)
 		if err != nil {
 			return nil, fmt.Errorf("PendingNonceAt fail: %w", err)
@@ -374,6 +374,7 @@ func BuildTx(client *ethclient.Client, privateKey *ecdsa.PrivateKey, fromAddress
 	gasLimit := globalOptGasLimit
 	if gasLimit == 0 { // if not specified
 		estimateGasLimit, err := client.EstimateGas(context.Background(), ethereum.CallMsg{
+			From:  account,
 			To:    toAddress,
 			Value: amount,
 			Data:  data,
