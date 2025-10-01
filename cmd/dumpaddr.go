@@ -4,14 +4,15 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"math"
+	"math/big"
+	"strings"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/spf13/cobra"
 	"github.com/tyler-smith/go-bip32"
 	"github.com/tyler-smith/go-bip39"
-	"math"
-	"math/big"
-	"strings"
 )
 
 var dumpAddrCmdDerivationPath string
@@ -71,7 +72,7 @@ var dumpAddrCmd = &cobra.Command{
 			}
 
 			publicKeyHexStr := hexutil.Encode(crypto.FromECDSAPub(publicKey))
-			fmt.Printf("private key: %v\n", publicKeyHexStr)
+			fmt.Printf("public key: %v\n", publicKeyHexStr)
 
 			addr := crypto.PubkeyToAddress(*publicKey).String()
 			fmt.Printf("addr: %v\n", addr)
