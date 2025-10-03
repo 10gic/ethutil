@@ -662,32 +662,36 @@ func getEIP1559GasPriceByFeeHistory(client *ethclient.Client) (*big.Int, *big.In
 	if err != nil {
 		return nil, nil, fmt.Errorf("FeeHistory failed: %w", err)
 	}
-	//var slow big.Int
-	//slow.Add(feeHistory.Reward[0][0], feeHistory.Reward[1][0])
-	//slow.Add(&slow, feeHistory.Reward[2][0])
-	//slow.Div(&slow, big.NewInt(3))
 
-	// log.Printf("feeHistory = %+v", feeHistory)
+	//jsonStr, _ := json.Marshal(feeHistory)
+	//log.Printf("feeHistory = %s", jsonStr)
 
-	if len(feeHistory.Reward) == 1 {
-		maxPriorityFeePerGasEstimate = feeHistory.Reward[0][2] // Use the fastest value (95 percentile)
-		maxFeePerGasEstimate = maxFeePerGasEstimate.Add(header.BaseFee, maxPriorityFeePerGasEstimate)
-		return maxFeePerGasEstimate, maxPriorityFeePerGasEstimate, nil
+	// Check if we have enough blocks for the original calculation
+	if len(feeHistory.Reward) >= 4 {
+		// Use all 4 blocks
+		var average big.Int
+		average.Add(feeHistory.Reward[0][1], feeHistory.Reward[1][1])
+		average.Add(&average, feeHistory.Reward[2][1])
+		average.Add(&average, feeHistory.Reward[3][1])
+		average.Div(&average, big.NewInt(4))
+		maxPriorityFeePerGasEstimate = &average
+	} else if len(feeHistory.Reward) == 3 {
+		// Use average of 3 blocks if only 3 available
+		var average big.Int
+		average.Add(feeHistory.Reward[0][1], feeHistory.Reward[1][1])
+		average.Add(&average, feeHistory.Reward[2][1])
+		average.Div(&average, big.NewInt(3))
+		maxPriorityFeePerGasEstimate = &average
+	} else if len(feeHistory.Reward) == 2 {
+		// Use average of 2 blocks if only 2 available
+		var average big.Int
+		average.Add(feeHistory.Reward[0][1], feeHistory.Reward[1][1])
+		average.Div(&average, big.NewInt(2))
+		maxPriorityFeePerGasEstimate = &average
+	} else {
+		// Fallback: use first block's medium value
+		maxPriorityFeePerGasEstimate = feeHistory.Reward[0][1]
 	}
-
-	var average big.Int
-	average.Add(feeHistory.Reward[0][1], feeHistory.Reward[1][1])
-	average.Add(&average, feeHistory.Reward[2][1])
-	average.Div(&average, big.NewInt(3))
-
-	//var fast big.Int
-	//fast.Add(feeHistory.Reward[0][2], feeHistory.Reward[1][2])
-	//fast.Add(&fast, feeHistory.Reward[2][2])
-	//fast.Div(&fast, big.NewInt(3))
-
-	// Currently, slow/fast are not used. we use average value
-	maxPriorityFeePerGasEstimate = &average
-	// log.Printf("maxPriorityFeePerGasEstimate = %v", maxPriorityFeePerGasEstimate.String())
 
 	maxFeePerGasEstimate = maxFeePerGasEstimate.Add(header.BaseFee, maxPriorityFeePerGasEstimate)
 	// log.Printf("maxFeePerGasEstimate = %v", maxFeePerGasEstimate.String())
