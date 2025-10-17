@@ -3,14 +3,15 @@ package cmd
 import (
 	"encoding/hex"
 	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/sha3"
-	"strconv"
-	"strings"
 )
 
 var decodeTxCmd = &cobra.Command{
@@ -53,15 +54,15 @@ var decodeTxCmd = &cobra.Command{
 		transactionType, err := strconv.ParseInt(firstHex, 16, 64)
 		checkErr(err)
 
-		if transactionType > 0x7f { // EIP-155
-			decodeEip155(rawTxHexData)
-		} else { // EIP-2718
+		if transactionType <= 0x7f { // EIP-2718
 			decodeEip2718(int(transactionType), rawTxHexData[2:])
+		} else { // Pre EIP-2718
+			decodeLegacy(rawTxHexData)
 		}
 	},
 }
 
-func decodeEip155(rawTxHexData string) {
+func decodeLegacy(rawTxHexData string) {
 	var tx *types.Transaction
 	rawTxBytes, _ := hex.DecodeString(rawTxHexData)
 	err := rlp.DecodeBytes(rawTxBytes, &tx)
@@ -70,9 +71,15 @@ func decodeEip155(rawTxHexData string) {
 	}
 
 	fmt.Printf("basic info:\n")
-	fmt.Printf("type = eip155, i.e. legacy transaction\n")
-	if tx.ChainId().Int64() > 0 { // chain id is not available before eip155
+	if tx.ChainId().Int64() > 0 {
+		fmt.Printf("type = eip155, i.e. legacy transaction\n")
 		fmt.Printf("chainId = %s (0x%s)\n", tx.ChainId().String(), hex.EncodeToString(tx.ChainId().Bytes()))
+	} else {
+		// chain id is not available before eip155
+		// Here is an example (it's the first tx of Ethereum mainnet, 0x5c504ed432cb51138bcf09aa5e8a410dd4a1e204ef84bfed1be16dfba1b22060):
+		// 0xf86780862d79883d2000825208945df9b87991262f6ba471f09758cde1c0fc1de734827a69801ca088ff6cf0fefd94db46111149ae4bfc179e9b94721fffd821d38d16464b3f71d0a045e0aff800961cfce805daef7016b9b675c137a6a41a548f7b60a3484c06a33a
+		fmt.Printf("type = pre-eip155, i.e. legacy transactions without replay-protected\n")
+		fmt.Printf("chainId = nil (not available in this tx)\n")
 	}
 	fmt.Printf("nonce = %d (0x%x)\n", tx.Nonce(), tx.Nonce())
 	fmt.Printf("gasPrice = %s (0x%s), i.e. %s Gwei\n", tx.GasPrice().String(), hex.EncodeToString(tx.GasPrice().Bytes()), wei2Other(bigIntToDecimal(tx.GasPrice()), unitGwei).String())
@@ -96,8 +103,15 @@ func decodeEip155(rawTxHexData string) {
 	var chainId = tx.ChainId()
 
 	// build msg (hash of data) before sign
-	singer := types.NewLondonSigner(chainId)
-	hash := singer.Hash(tx)
+	var signer types.Signer
+	if chainId.Sign() > 0 {
+		// EIP-155 transaction with chain ID
+		signer = types.NewLondonSigner(chainId)
+	} else {
+		// Pre-EIP-155 transaction without chain ID
+		signer = types.HomesteadSigner{}
+	}
+	hash := signer.Hash(tx)
 	fmt.Printf("hash before ecdsa sign (hex) = %x\n", hash.Bytes())
 
 	fmt.Printf("ecdsa recovery id = %d\n", getRecoveryId(v))
