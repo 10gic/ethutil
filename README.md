@@ -36,6 +36,7 @@ Available Commands:
   eip7702-set-eoa-code    Set EOA account code, see EIP-7702. Just use 0x0000000000000000000000000000000000000000 when you want to clear the code.
   eip7702-sign-auth-tuple Sign EIP-7702 authorization tuple, see EIP-7702.
   public-rpc              Show public RPC endpoints for a chain
+  recover-public-key      Recover public key and address from message hash and signature
   help                    Help about any command
   completion              Generate the autocompletion script for the specified shell
 
@@ -348,6 +349,13 @@ RPC Endpoints:
    Tracking: yes
 
 ......
+```
+
+## Recover public key and address from message hash and signature
+```shell
+$ ethutil  recover-public-key 185f8db32271fe25f561a6fc938b2e264306ec304eda518007d1764826381969  f98d337dbf5fe066e8b37d4be72a2920d1707a6d5d0b2b3ca27880a27e5d29aa4bf45b098001e1d7aeb0649d588b1a95f4f37f5cfc1e271170f0dbecf9fe534601
+uncompressed public key (hex) = 0x04c5bae53d945a19fe368307e6cb8dd3b61917a4ba52e110befef669c8d84f71a0531cf5fcd4f62f730bea8c3a42a8b67445fad284f6cf859cf0dc4c7812652682
+address = 0x6441BeC9284Cd340ccda31d7C46bd42f293A3a64
 ```
 
 # Known Issue
