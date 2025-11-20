@@ -142,6 +142,7 @@ func init() {
 	rootCmd.AddCommand(eip7702SetEoaCodeCmd)
 	rootCmd.AddCommand(eip7702SignAuthTupleCmd)
 	rootCmd.AddCommand(publicRpcCmd)
+	rootCmd.AddCommand(recoverPublicKeyCmd)
 }
 
 func testRpcValid(rpcUrl string) error {
