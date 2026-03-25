@@ -549,7 +549,7 @@ func Transact(rpcClient *rpc.Client, client *ethclient.Client, privateKey *ecdsa
 		// show tx explorer url only when globalOptNodeUrl in map nodeUrlMap
 		for k, v := range nodeUrlMap {
 			if v == globalOptNodeUrl {
-				log.Printf(nodeTxExplorerUrlMap[k] + rpcReturnTx.String())
+				log.Print(nodeTxExplorerUrlMap[k] + rpcReturnTx.String())
 				break
 			}
 		}

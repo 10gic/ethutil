@@ -148,7 +148,7 @@ var transferCmd = &cobra.Command{
 					Data:  common.FromHex(transferHexData),
 				})
 				if err != nil {
-					log.Fatalf("EstimateGas fail: %w", err)
+					log.Fatalf("EstimateGas fail: %v", err)
 				}
 				gasLimit = estimateGasLimit
 			}

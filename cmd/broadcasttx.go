@@ -24,7 +24,7 @@ var broadcastTxCmd = &cobra.Command{
 
 		for k, v := range nodeUrlMap {
 			if v == globalOptNodeUrl {
-				log.Printf(nodeTxExplorerUrlMap[k] + rpcReturnTx.String())
+				log.Print(nodeTxExplorerUrlMap[k] + rpcReturnTx.String())
 				break
 			}
 		}

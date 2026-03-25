@@ -13,7 +13,7 @@ import (
 
 // recoverPublicKeyCmd represents the recover-public-key command
 var recoverPublicKeyCmd = &cobra.Command{
-	Use:   "recover-public-key <message-hash> <signature>",
+	Use:   "recover-public-key <message-hash> <signature(RSV)>",
 	Short: "Recover public key and address from message hash and signature",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
