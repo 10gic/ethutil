@@ -70,7 +70,18 @@ func buildTxInputData(funcSignature string, inputArgData []string) ([]byte, erro
 	if len(funcArgTypes) != len(inputArgData) {
 		return nil, fmt.Errorf("invalid input, there are %v args in signature, but %v args are provided", len(funcArgTypes), len(inputArgData))
 	}
-	data, err := encodeParameters(funcArgTypes, inputArgData)
+
+	// Parse each string argument into structured data using type information
+	structured := make([]any, len(inputArgData))
+	for i, raw := range inputArgData {
+		val, err := parseArgValue(funcArgTypes[i], raw)
+		if err != nil {
+			return nil, fmt.Errorf("parse arg %d failed: %w", i, err)
+		}
+		structured[i] = val
+	}
+
+	data, err := encodeParametersFromValues(funcArgTypes, structured)
 	if err != nil {
 		return nil, fmt.Errorf("encodeParameters fail: %v", err)
 	}
@@ -175,33 +186,411 @@ func parseFuncSignature(input string) (string, []string, error) {
 	if strings.TrimSpace(argsPart) == "" {
 		return funcName, nil, nil
 	}
-	args := splitData(argsPart)
+	args := splitTopLevel(argsPart)
 	for index, arg := range args {
-		// log.Printf("arg %v", arg)
-		if strings.HasPrefix(arg, "(") && strings.HasSuffix(arg, ")") { // tuple
-			args[index] = arg // do nothings, the value of `args[index]` is `arg` before assignment
-		} else if strings.HasSuffix(arg, "]") { // array
-			args[index] = arg // do nothings, the value of `args[index]` is `arg` before assignment
-		} else {
-			fields := strings.Fields(arg)
-			if len(fields) == 0 {
-				return "", nil, fmt.Errorf("signature `%v` invalid type missing in args", input)
-			}
-			// first field is type. for example,
-			// "uint256 xx", first field is uint256
-			// "uint256[] xx", first field is uint256[]
-			args[index] = typeNormalize(fields[0])
-
-			if len(fields) >= 2 && fields[0] == "address" && strings.HasPrefix(fields[1], "payable[") {
-				// handle case:
-				// f1(address payable[] memory a, uint256 b)
-				// f1(address payable[3] memory a, uint256 b)
-				args[index] = fields[0] + strings.Replace(fields[1], "payable", "", 1) // args[index] = address[] or address[3]
-			}
+		normalized, err := normalizeSignatureArg(arg)
+		if err != nil {
+			return "", nil, err
 		}
+		args[index] = normalized
 	}
 
 	return funcName, args, nil
+}
+
+func normalizeSignatureArg(arg string) (string, error) {
+	arg = strings.TrimSpace(arg)
+	if arg == "" {
+		return "", fmt.Errorf("signature arg is empty")
+	}
+
+	if strings.HasPrefix(arg, "(") {
+		tupleText, afterTuple, err := extractLeadingTuple(arg)
+		if err != nil {
+			return "", err
+		}
+		if len(tupleText) < 2 {
+			return "", fmt.Errorf("invalid tuple type %q", arg)
+		}
+
+		inner := tupleText[1 : len(tupleText)-1]
+		innerArgs := splitTopLevel(inner)
+		var normalizedInner []string
+		for _, innerArg := range innerArgs {
+			normalizedArg, err := normalizeSignatureArg(innerArg)
+			if err != nil {
+				return "", err
+			}
+			normalizedInner = append(normalizedInner, normalizedArg)
+		}
+		normalizedTuple := "(" + strings.Join(normalizedInner, ",") + ")"
+
+		arrayPart, err := extractLeadingArraySuffix(afterTuple)
+		if err != nil {
+			return "", err
+		}
+		return normalizedTuple + arrayPart, nil
+	}
+
+	fields := strings.Fields(arg)
+	if len(fields) == 0 {
+		return "", fmt.Errorf("signature arg %q invalid type missing", arg)
+	}
+
+	// first field is type. for example,
+	// "uint256 xx", first field is uint256
+	// "uint256[] xx", first field is uint256[]
+	typ := typeNormalize(fields[0])
+
+	if len(fields) >= 2 && fields[0] == "address" && strings.HasPrefix(fields[1], "payable[") {
+		// handle case:
+		// f1(address payable[] memory a, uint256 b)
+		// f1(address payable[3] memory a, uint256 b)
+		typ = fields[0] + strings.Replace(fields[1], "payable", "", 1) // typ = address[] or address[3]
+	} else if len(fields) >= 2 && fields[0] == "address" && fields[1] == "payable" {
+		// handle "address payable x"
+		typ = fields[0]
+	}
+
+	return typ, nil
+}
+
+func extractLeadingTuple(arg string) (string, string, error) {
+	arg = strings.TrimSpace(arg)
+	if !strings.HasPrefix(arg, "(") {
+		return "", "", fmt.Errorf("tuple arg must start with '('")
+	}
+
+	depth := 0
+	for index, ch := range arg {
+		if ch == '(' {
+			depth++
+		} else if ch == ')' {
+			depth--
+			if depth == 0 {
+				return arg[:index+1], arg[index+1:], nil
+			}
+		}
+	}
+	return "", "", fmt.Errorf("invalid tuple arg %q: unmatched parenthesis", arg)
+}
+
+func extractLeadingArraySuffix(input string) (string, error) {
+	input = strings.TrimSpace(input)
+
+	var suffix = ""
+	for strings.HasPrefix(input, "[") {
+		rightBracket := strings.Index(input, "]")
+		if rightBracket < 0 {
+			return "", fmt.Errorf("invalid array suffix in %q", input)
+		}
+		suffix += input[:rightBracket+1]
+		input = strings.TrimSpace(input[rightBracket+1:])
+	}
+
+	return suffix, nil
+}
+
+// parseArgValue parses a CLI string argument into a structured Go value based
+// on the ABI type. Scalars are returned as strings (for later conversion by
+// buildConcreteData). Arrays and tuples are returned as []any with recursively
+// parsed elements.
+//
+// Examples:
+//
+//	parseArgValue("uint256", "123")                → "123"
+//	parseArgValue("address", "0xabc...")            → "0xabc..."
+//	parseArgValue("string", "hello, world")         → "hello, world"
+//	parseArgValue("uint256[]", "[1, 2, 3]")         → []any{"1", "2", "3"}
+//	parseArgValue("(uint256,bool)", "(123, true)")  → []any{"123", "true"}
+//	parseArgValue("(string,uint256)", `("hello, world", 123)`) → []any{"hello, world", "123"}
+func parseArgValue(argType string, rawArg string) (any, error) {
+	argType = strings.TrimSpace(argType)
+
+	isTuple := strings.HasPrefix(argType, "(") && strings.HasSuffix(argType, ")")
+	isTupleArray := tupleArrayRE.MatchString(argType)
+	isArray := !isTupleArray && !isTuple && strings.HasSuffix(argType, "]")
+
+	if isTupleArray {
+		// e.g. (uint256,bool)[3] or (uint256,bool)[]
+		elemType := argType[:strings.LastIndex(argType, "[")]
+		return parseArrayValue(elemType, rawArg)
+	}
+
+	if isTuple {
+		return parseTupleValue(argType, rawArg)
+	}
+
+	if isArray {
+		// e.g. uint256[], address[3], bytes[2][3]
+		bracketIdx := strings.LastIndex(argType, "[")
+		elemType := argType[:bracketIdx]
+		return parseArrayValue(elemType, rawArg)
+	}
+
+	// Scalar type — return as-is string
+	return rawArg, nil
+}
+
+// parseTupleValue parses a tuple data string like "(123, true)" given
+// the tuple type string "(uint256,bool)". Returns []any.
+func parseTupleValue(tupleType string, rawData string) (any, error) {
+	// Parse element types from the type string
+	inner := tupleType[1 : len(tupleType)-1]
+	elemTypes := splitTopLevel(inner)
+
+	// Strip outer parens from data
+	rawData = strings.TrimSpace(rawData)
+	if strings.HasPrefix(rawData, "(") && strings.HasSuffix(rawData, ")") {
+		rawData = rawData[1 : len(rawData)-1]
+	}
+
+	elemValues := splitTopLevel(rawData)
+	if len(elemValues) != len(elemTypes) {
+		return nil, fmt.Errorf("tuple type has %d elements but data has %d", len(elemTypes), len(elemValues))
+	}
+
+	result := make([]any, len(elemTypes))
+	for i, et := range elemTypes {
+		// Normalize the element type (strip names, normalize int→int256, etc.)
+		normalized, err := normalizeSignatureArg(et)
+		if err != nil {
+			return nil, fmt.Errorf("normalize tuple element type failed: %w", err)
+		}
+		val, err := parseArgValue(normalized, elemValues[i])
+		if err != nil {
+			return nil, fmt.Errorf("parse tuple element %d failed: %w", i, err)
+		}
+		result[i] = val
+	}
+	return result, nil
+}
+
+// parseArrayValue parses an array data string like "[1, 2, 3]" given
+// the element type string. Returns []any.
+func parseArrayValue(elemType string, rawData string) (any, error) {
+	rawData = strings.TrimSpace(rawData)
+	if strings.HasPrefix(rawData, "[") && strings.HasSuffix(rawData, "]") {
+		rawData = rawData[1 : len(rawData)-1]
+	}
+
+	if strings.TrimSpace(rawData) == "" {
+		return []any{}, nil
+	}
+
+	elemValues := splitTopLevel(rawData)
+	result := make([]any, len(elemValues))
+	for i, ev := range elemValues {
+		val, err := parseArgValue(elemType, ev)
+		if err != nil {
+			return nil, fmt.Errorf("parse array element %d failed: %w", i, err)
+		}
+		result[i] = val
+	}
+	return result, nil
+}
+
+// encodeParametersFromValues encodes structured parameter values into ABI bytes.
+// Unlike encodeParameters which takes []string, this function takes []any where:
+//   - scalar types: string (e.g. "123", "0xabc...", "true")
+//   - arrays: []any of recursively structured elements
+//   - tuples: []any of recursively structured elements
+func encodeParametersFromValues(inputArgTypes []string, inputArgData []any) ([]byte, error) {
+	if len(inputArgTypes) != len(inputArgData) {
+		return nil, fmt.Errorf("type count %d != data count %d", len(inputArgTypes), len(inputArgData))
+	}
+
+	var abiArgs abi.Arguments
+	var packedData []any
+
+	for i, argType := range inputArgTypes {
+		typ, val, err := buildTypedValue(argType, inputArgData[i])
+		if err != nil {
+			return nil, fmt.Errorf("arg %d: %w", i, err)
+		}
+		abiArgs = append(abiArgs, abi.Argument{Type: typ})
+		packedData = append(packedData, val)
+	}
+
+	return abiArgs.Pack(packedData...)
+}
+
+// buildTypedValue builds an abi.Type and a corresponding Go value from a type
+// string and a structured data value (string for scalars, []any for compounds).
+func buildTypedValue(argType string, data any) (abi.Type, any, error) {
+	argType = strings.TrimSpace(argType)
+
+	isTuple := strings.HasPrefix(argType, "(") && strings.HasSuffix(argType, ")")
+	isTupleArray := tupleArrayRE.MatchString(argType)
+	isArray := !isTupleArray && !isTuple && strings.HasSuffix(argType, "]")
+
+	if isTupleArray {
+		return buildTupleArrayValue(argType, data)
+	}
+	if isTuple {
+		return buildTupleValue(argType, data)
+	}
+	if isArray {
+		return buildArrayValue(argType, data)
+	}
+
+	// Scalar
+	str, ok := data.(string)
+	if !ok {
+		return abi.Type{}, nil, fmt.Errorf("expected string for scalar type %q, got %T", argType, data)
+	}
+	typ, err := abi.NewType(typeNormalize(argType), "", nil)
+	if err != nil {
+		return abi.Type{}, nil, fmt.Errorf("abi.NewType(%q) failed: %w", argType, err)
+	}
+	val, err := buildConcreteData(typeNormalize(argType), str)
+	if err != nil {
+		return abi.Type{}, nil, err
+	}
+	return typ, val, nil
+}
+
+// buildTupleValue builds abi.Type and Go struct value for a tuple type.
+func buildTupleValue(tupleType string, data any) (abi.Type, any, error) {
+	items, ok := data.([]any)
+	if !ok {
+		return abi.Type{}, nil, fmt.Errorf("expected []any for tuple type %q, got %T", tupleType, data)
+	}
+
+	typ, err := buildTupleType(tupleType)
+	if err != nil {
+		return abi.Type{}, nil, err
+	}
+
+	if len(typ.TupleElems) != len(items) {
+		return abi.Type{}, nil, fmt.Errorf("tuple %q has %d fields but got %d values", tupleType, len(typ.TupleElems), len(items))
+	}
+
+	v := reflect.New(typ.TupleType).Elem()
+	for i, name := range typ.TupleRawNames {
+		_, val, err := buildTypedValue(typ.TupleElems[i].String(), items[i])
+		if err != nil {
+			return abi.Type{}, nil, fmt.Errorf("tuple field %s: %w", name, err)
+		}
+		field := v.FieldByName(name)
+		rv := reflect.ValueOf(val)
+		if rv.Kind() == reflect.Ptr && field.Kind() == reflect.Struct {
+			rv = rv.Elem()
+		}
+		field.Set(rv)
+	}
+
+	return typ, v.Addr().Interface(), nil
+}
+
+// buildArrayValue builds abi.Type and Go slice value for an array type.
+func buildArrayValue(arrayType string, data any) (abi.Type, any, error) {
+	items, ok := data.([]any)
+	if !ok {
+		return abi.Type{}, nil, fmt.Errorf("expected []any for array type %q, got %T", arrayType, data)
+	}
+
+	bracketIdx := strings.LastIndex(arrayType, "[")
+	elemType := arrayType[:bracketIdx]
+
+	typ, err := abi.NewType(typeNormalize(arrayType), "", nil)
+	if err != nil {
+		return abi.Type{}, nil, fmt.Errorf("abi.NewType(%q) failed: %w", arrayType, err)
+	}
+
+	if len(items) == 0 {
+		goType := typ.GetType()
+		if goType.Kind() == reflect.Array {
+			return typ, reflect.New(goType).Elem().Interface(), nil
+		}
+		return typ, reflect.MakeSlice(goType, 0, 0).Interface(), nil
+	}
+
+	// Build each element
+	var elemVals []any
+	for i, item := range items {
+		_, val, err := buildTypedValue(elemType, item)
+		if err != nil {
+			return abi.Type{}, nil, fmt.Errorf("array element %d: %w", i, err)
+		}
+		elemVals = append(elemVals, val)
+	}
+
+	// Build properly typed slice using reflect
+	goType := typ.GetType()
+	var sliceVal reflect.Value
+	if goType.Kind() == reflect.Array {
+		if len(elemVals) != goType.Len() {
+			return abi.Type{}, nil, fmt.Errorf("array %q expects %d elements but got %d", arrayType, goType.Len(), len(elemVals))
+		}
+		sliceVal = reflect.New(goType).Elem()
+		for i, val := range elemVals {
+			rv := reflect.ValueOf(val)
+			if rv.Kind() == reflect.Ptr && sliceVal.Index(i).Kind() == reflect.Struct {
+				rv = rv.Elem()
+			}
+			sliceVal.Index(i).Set(rv)
+		}
+	} else {
+		sliceVal = reflect.MakeSlice(goType, len(elemVals), len(elemVals))
+		for i, val := range elemVals {
+			rv := reflect.ValueOf(val)
+			if rv.Kind() == reflect.Ptr && sliceVal.Index(i).Kind() == reflect.Struct {
+				rv = rv.Elem()
+			}
+			sliceVal.Index(i).Set(rv)
+		}
+	}
+
+	return typ, sliceVal.Interface(), nil
+}
+
+// buildTupleArrayValue builds abi.Type and Go slice value for a tuple array type.
+func buildTupleArrayValue(arrayType string, data any) (abi.Type, any, error) {
+	items, ok := data.([]any)
+	if !ok {
+		return abi.Type{}, nil, fmt.Errorf("expected []any for tuple array type %q, got %T", arrayType, data)
+	}
+
+	typ, err := BuildTupleArrayType(arrayType)
+	if err != nil {
+		return abi.Type{}, nil, err
+	}
+
+	elemTupleType := arrayType[:strings.LastIndex(arrayType, "[")]
+
+	if len(items) == 0 {
+		goType := typ.GetType()
+		if goType.Kind() == reflect.Array {
+			return typ, reflect.New(goType).Elem().Interface(), nil
+		}
+		return typ, reflect.MakeSlice(goType, 0, 0).Interface(), nil
+	}
+
+	goType := typ.GetType()
+	var sliceVal reflect.Value
+	if goType.Kind() == reflect.Array {
+		if len(items) != goType.Len() {
+			return abi.Type{}, nil, fmt.Errorf("tuple array %q expects %d elements but got %d", arrayType, goType.Len(), len(items))
+		}
+		sliceVal = reflect.New(goType).Elem()
+	} else {
+		sliceVal = reflect.MakeSlice(goType, len(items), len(items))
+	}
+
+	for i, item := range items {
+		_, val, err := buildTupleValue(elemTupleType, item)
+		if err != nil {
+			return abi.Type{}, nil, fmt.Errorf("tuple array element %d: %w", i, err)
+		}
+		rv := reflect.ValueOf(val)
+		if rv.Kind() == reflect.Ptr {
+			rv = rv.Elem()
+		}
+		sliceVal.Index(i).Set(rv)
+	}
+
+	return typ, sliceVal.Interface(), nil
 }
 
 // encodeParameters Encode parameters
@@ -209,18 +598,19 @@ func parseFuncSignature(input string) (string, []string, error) {
 // inputArgTypes: ["uint256", "address", "bool"]
 // inputArgData: ["123", "0x8F36975cdeA2e6E64f85719788C8EFBBe89DFBbb", "true"]
 // return: 000000000000000000000000000000000000000000000000000000000000007b0000000000000000000000008f36975cdea2e6e64f85719788c8efbbe89dfbbb0000000000000000000000000000000000000000000000000000000000000001
+// encodeParameters Encode parameters (backward-compatible shim).
+// Parses each string argument using type information, then delegates to
+// encodeParametersFromValues.
 func encodeParameters(inputArgTypes, inputArgData []string) ([]byte, error) {
-	var theTypes abi.Arguments
-	var theArgData []any
-	theTypes, theArgData, err := buildArgumentAndData(inputArgTypes, inputArgData)
-	if err != nil {
-		return nil, fmt.Errorf("buildArgumentAndData fail: %s", err)
+	structured := make([]any, len(inputArgData))
+	for i, raw := range inputArgData {
+		val, err := parseArgValue(inputArgTypes[i], raw)
+		if err != nil {
+			return nil, fmt.Errorf("parse arg %d fail: %w", i, err)
+		}
+		structured[i] = val
 	}
-	bytes, err := theTypes.Pack(theArgData...)
-	if err != nil {
-		return nil, fmt.Errorf("pack fail: %s", err)
-	}
-	return bytes, nil
+	return encodeParametersFromValues(inputArgTypes, structured)
 }
 
 // buildTupleType build tuple abi.Type
@@ -228,13 +618,9 @@ func encodeParameters(inputArgTypes, inputArgData []string) ([]byte, error) {
 // tupleType: "(uint256, bool)"
 // return: abi.NewType("tuple", "", []abi.ArgumentMarshaling{{Name: "Field0", Type: "uint256"}, {Name: "Field1", Type: "bool"}})
 func buildTupleType(tupleType string) (abi.Type, error) {
-	var components []abi.ArgumentMarshaling
-	arrayOfType := splitData(tupleType)
-	for index, typ := range arrayOfType {
-		components = append(components, abi.ArgumentMarshaling{
-			Name: "Field" + strconv.Itoa(index),
-			Type: typ,
-		})
+	components, err := buildTupleComponents(tupleType)
+	if err != nil {
+		return abi.Type{}, err
 	}
 	return abi.NewType("tuple", "", components)
 }
@@ -246,428 +632,113 @@ func buildTupleType(tupleType string) (abi.Type, error) {
 func BuildTupleArrayType(tupleType string) (abi.Type, error) {
 	// If tupleType is (bool,uint256)[5], then
 	// tupleTypePart1 is (bool,uint256)
-	// tupleTypePart2 is 5
+	// tupleTypePart2 is [5]
 	tupleTypePart1 := tupleType[0:strings.LastIndex(tupleType, "[")]
-	// grab the slice size with regexp
-	re := regexp.MustCompile("[0-9]+")
-	arrayOfType := splitData(tupleTypePart1)
-
 	tupleTypePart2 := tupleType[strings.LastIndex(tupleType, "["):]
+	re := regexp.MustCompile("[0-9]+")
 	intz := re.FindString(tupleTypePart2)
 
-	var components []abi.ArgumentMarshaling
-	for index, typ := range arrayOfType {
-		components = append(components, abi.ArgumentMarshaling{
-			Name: "Field" + strconv.Itoa(index),
-			Type: typ,
-		})
+	components, err := buildTupleComponents(tupleTypePart1)
+	if err != nil {
+		return abi.Type{}, err
 	}
 	return abi.NewType(fmt.Sprintf("tuple[%s]", intz), "", components)
 }
 
-func buildArgumentAndData(inputArgTypes, inputArgData []string) (abi.Arguments, []any, error) {
-	// log.Printf("inputArgTypes = %v, inputArgData = %v", inputArgTypes, inputArgData)
-	var theTypes abi.Arguments
-	var theArgData []any
-	for index, inputType := range inputArgTypes {
-		var typ abi.Type
-		var err error
-
-		var isArray, _ = regexp.MatchString(`^.+\[\d*\]$`, inputType)                        // dynamic array xxx[] or fixed-length array xxx[4]
-		var isTuple = strings.HasPrefix(inputType, "(") && strings.HasSuffix(inputType, ")") // (bool, uint256)
-		var isTupleArray, _ = regexp.MatchString(`^\(.+\)\[\d*\]$`, inputType)               // (bool, uint256)[] or (bool, uint256)[3]
-
-		if isTuple {
-			typ, err = buildTupleType(inputType)
-			if err != nil {
-				return nil, nil, fmt.Errorf("buildTupleType fail: %w", err)
-			}
-		} else if isTupleArray {
-			typ, err = BuildTupleArrayType(inputType)
-			if err != nil {
-				return nil, nil, fmt.Errorf("BuildTupleArrayType fail: %w", err)
-			}
-		} else {
-			typ, err = abi.NewType(typeNormalize(inputType), "", nil)
-			if err != nil {
-				return nil, nil, fmt.Errorf("abi.NewType fail: %w", err)
-			}
-		}
-		// log.Printf("arg typ %+v", typ)
-		theTypes = append(theTypes, abi.Argument{Type: typ})
-
-		if isArray { // handle array type
-			var arrayElementType string
-			leftParenthesisLoc := strings.LastIndex(inputType, "[")
-			arrayElementType = inputType[:leftParenthesisLoc] // remove all chars from char '['. If inputType is bool[], then arrayElementType is bool
-			arrayElementType = strings.TrimSpace(arrayElementType)
-
-			var arrayOfTypes []string
-			// log.Printf("before splitData %v", inputArgData[index])
-			arrayOfData := splitData(inputArgData[index])
-			// log.Printf("after splitData %v", arrayOfData)
-			// log.Printf("input %v, arrayOfData %+v", inputArgData[index], arrayOfData)
-			for range arrayOfData {
-				arrayOfTypes = append(arrayOfTypes, typeNormalize(arrayElementType)) // `address[3]`  -> `[address, address, address]`
-			}
-
-			args, datas, err := buildArgumentAndData(arrayOfTypes, arrayOfData)
-			if err != nil {
-				return nil, nil, fmt.Errorf("buildArgumentAndData fail: %w", err)
-			}
-
-			//var elemType = args[0].Type
-			//if IsDynamicType(elemType) {
-			if isTupleArray {
-				// In case of:
-				// inputType is array of tuple, e.g. (uint256, bool)[]
-				// arrayElementType is tuple, e.g. (uint256, bool)
-				slice := reflect.MakeSlice(reflect.SliceOf(args[0].Type.GetType()), 0, 0)
-				for _, data := range datas {
-					slice = reflect.Append(slice, reflect.ValueOf(data).Elem())
-				}
-				theArgData = append(theArgData, slice.Interface())
-			} else if arrayElementType == "string" { // FIXME: for all kind of arrayElementType, we can also refactor it to use reflect
-				// datas ([]interface {})   --->  elementData ([]string)
-				var elementData []string
-				for _, data := range datas {
-					elementData = append(elementData, data.(string))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "int8" {
-				// datas ([]interface {})   --->  elementData ([]int8)
-				var elementData []int8
-				for _, data := range datas {
-					elementData = append(elementData, data.(int8))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "int16" {
-				var elementData []int16
-				for _, data := range datas {
-					elementData = append(elementData, data.(int16))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "int32" {
-				var elementData []int32
-				for _, data := range datas {
-					elementData = append(elementData, data.(int32))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "int64" {
-				var elementData []int64
-				for _, data := range datas {
-					elementData = append(elementData, data.(int64))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "uint8" {
-				var elementData []uint8
-				for _, data := range datas {
-					elementData = append(elementData, data.(uint8))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "uint16" {
-				var elementData []uint16
-				for _, data := range datas {
-					elementData = append(elementData, data.(uint16))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "uint32" {
-				var elementData []uint32
-				for _, data := range datas {
-					elementData = append(elementData, data.(uint32))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "uint64" {
-				var elementData []uint64
-				for _, data := range datas {
-					elementData = append(elementData, data.(uint64))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if strings.Contains(arrayElementType, "int") {
-				var elementData []*big.Int
-				for _, data := range datas {
-					elementData = append(elementData, data.(*big.Int))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bool" {
-				var elementData []bool
-				for _, data := range datas {
-					elementData = append(elementData, data.(bool))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "address" {
-				var elementData []common.Address
-				for _, data := range datas {
-					elementData = append(elementData, data.(common.Address))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes" {
-				var elementData [][]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes1" {
-				var elementData [][1]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([1]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes2" {
-				var elementData [][2]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([2]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes3" {
-				var elementData [][3]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([3]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes4" {
-				var elementData [][4]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([4]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes5" {
-				var elementData [][5]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([5]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes6" {
-				var elementData [][6]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([6]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes7" {
-				var elementData [][7]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([7]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes8" {
-				var elementData [][8]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([8]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes9" {
-				var elementData [][9]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([9]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes10" {
-				var elementData [][10]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([10]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes11" {
-				var elementData [][11]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([11]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes12" {
-				var elementData [][12]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([12]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes13" {
-				var elementData [][13]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([13]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes14" {
-				var elementData [][14]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([14]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes15" {
-				var elementData [][15]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([15]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes16" {
-				var elementData [][16]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([16]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes17" {
-				var elementData [][17]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([17]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes18" {
-				var elementData [][18]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([18]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes19" {
-				var elementData [][19]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([19]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes20" {
-				var elementData [][20]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([20]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes21" {
-				var elementData [][21]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([21]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes22" {
-				var elementData [][22]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([22]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes23" {
-				var elementData [][23]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([23]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes24" {
-				var elementData [][24]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([24]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes25" {
-				var elementData [][25]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([25]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes26" {
-				var elementData [][26]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([26]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes27" {
-				var elementData [][27]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([27]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes28" {
-				var elementData [][28]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([28]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes29" {
-				var elementData [][29]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([29]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes30" {
-				var elementData [][30]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([30]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes31" {
-				var elementData [][31]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([31]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else if arrayElementType == "bytes32" {
-				var elementData [][32]byte
-				for _, data := range datas {
-					elementData = append(elementData, data.([32]byte))
-				}
-				theArgData = append(theArgData, elementData)
-			} else {
-				return nil, nil, fmt.Errorf("type %v not implemented in array type currently", inputType)
-			}
-		} else if isTuple { // handle Solidity struct (i.e. ABI tuple)
-			arrayOfData := splitData(inputArgData[index])
-			tupleData, err := BuildTupleArgData(typ, arrayOfData)
-			if err != nil {
-				return nil, nil, fmt.Errorf("BuildTupleArgData fail: %w", err)
-			}
-			theArgData = append(theArgData, tupleData)
-		} else {
-			data, err := buildConcreteData(inputType, inputArgData[index])
-			if err != nil {
-				return nil, nil, fmt.Errorf("buildConcreteData fail: %w", err)
-			}
-			theArgData = append(theArgData, data)
-		}
+// buildTupleComponents parses a tuple type string like "(uint256,bool)" or
+// "(int192,((bytes30,bytes16),address))" and returns the ArgumentMarshaling
+// slice, recursively handling nested tuples.
+func buildTupleComponents(tupleType string) ([]abi.ArgumentMarshaling, error) {
+	// Strip outer parens and split by top-level commas
+	inner := strings.TrimSpace(tupleType)
+	if strings.HasPrefix(inner, "(") && strings.HasSuffix(inner, ")") {
+		inner = inner[1 : len(inner)-1]
 	}
+	arrayOfType := splitTopLevel(inner)
+	var components []abi.ArgumentMarshaling
+	for index, typ := range arrayOfType {
+		m := abi.ArgumentMarshaling{
+			Name: "Field" + strconv.Itoa(index),
+		}
 
-	return theTypes, theArgData, nil
+		// Check for tuple array: (type,type)[N] or (type,type)[]
+		if tupleArrayRE.MatchString(typ) {
+			tuplePartEnd := strings.LastIndex(typ, "[")
+			tuplePart := typ[:tuplePartEnd]
+			arraySuffix := typ[tuplePartEnd:]
+			re := regexp.MustCompile("[0-9]+")
+			intz := re.FindString(arraySuffix)
+
+			sub, err := buildTupleComponents(tuplePart)
+			if err != nil {
+				return nil, err
+			}
+			m.Type = fmt.Sprintf("tuple[%s]", intz)
+			m.Components = sub
+		} else if strings.HasPrefix(typ, "(") && strings.HasSuffix(typ, ")") {
+			// Nested tuple
+			sub, err := buildTupleComponents(typ)
+			if err != nil {
+				return nil, err
+			}
+			m.Type = "tuple"
+			m.Components = sub
+		} else {
+			m.Type = typ
+		}
+
+		components = append(components, m)
+	}
+	return components, nil
 }
 
 func buildConcreteData(inputType string, data string) (any, error) {
 	if inputType == "string" {
 		return data, nil
 	} else if inputType == "int8" {
-		i, err := strconv.ParseInt(data, 10, 64)
+		i, err := parseIntAuto(data, 64)
 		if err != nil {
 			return nil, fmt.Errorf("%s cannot covert to type %v", data, inputType)
 		}
 		return int8(i), nil
 	} else if inputType == "int16" {
-		i, err := strconv.ParseInt(data, 10, 64)
+		i, err := parseIntAuto(data, 64)
 		if err != nil {
 			return nil, fmt.Errorf("%s cannot covert to type %v", data, inputType)
 		}
 		return int16(i), nil
 	} else if inputType == "int32" {
-		i, err := strconv.ParseInt(data, 10, 64)
+		i, err := parseIntAuto(data, 64)
 		if err != nil {
 			return nil, fmt.Errorf("%s cannot covert to type %v", data, inputType)
 		}
 		return int32(i), nil
 	} else if inputType == "int64" {
-		i, err := strconv.ParseInt(data, 10, 64)
+		i, err := parseIntAuto(data, 64)
 		if err != nil {
 			return nil, fmt.Errorf("%s cannot covert to type %v", data, inputType)
 		}
 		return int64(i), nil
 	} else if inputType == "uint8" {
-		i, err := strconv.ParseInt(data, 10, 64)
+		i, err := parseUintAuto(data, 64)
 		if err != nil {
 			return nil, fmt.Errorf("%s cannot covert to type %v", data, inputType)
 		}
 		return uint8(i), nil
 	} else if inputType == "uint16" {
-		i, err := strconv.ParseInt(data, 10, 64)
+		i, err := parseUintAuto(data, 64)
 		if err != nil {
 			return nil, fmt.Errorf("%s cannot covert to type %v", data, inputType)
 		}
 		return uint16(i), nil
 	} else if inputType == "uint32" {
-		i, err := strconv.ParseInt(data, 10, 64)
+		i, err := parseUintAuto(data, 64)
 		if err != nil {
 			return nil, fmt.Errorf("%s cannot covert to type %v", data, inputType)
 		}
 		return uint32(i), nil
 	} else if inputType == "uint64" {
-		i, err := strconv.ParseUint(data, 10, 64)
+		i, err := parseUintAuto(data, 64)
 		if err != nil {
 			return nil, fmt.Errorf("%s cannot covert to type %v", data, inputType)
 		}
@@ -858,66 +929,102 @@ func buildConcreteData(inputType string, data string) (any, error) {
 	}
 }
 
-// input: `("abc", "xyz")`     ----> abc, xyz
-// input: `["abc", "xyz"]`     ----> abc, xyz
-// `[(4,true), (5,false)]`  ----2 elements----> (4,true), (5,false)
-// `[[12,13], [14,15]]`  ----2 elements----> [12,13], [14,15]
-func splitData(input string) []string {
-	input = strings.TrimSpace(input)
-	if strings.HasPrefix(input, "(") && strings.HasSuffix(input, ")") {
-		input = input[1 : len(input)-1] // remove prefix "(" and suffix ")"
+// parseIntAuto parses an integer string, auto-detecting hex (0x prefix) or decimal.
+func parseIntAuto(s string, bitSize int) (int64, error) {
+	if has0xPrefix(s) {
+		return strconv.ParseInt(remove0xPrefix(s), 16, bitSize)
 	}
-	if strings.HasPrefix(input, "[") && strings.HasSuffix(input, "]") {
-		input = input[1 : len(input)-1] // remove prefix "[" and suffix "]"
+	return strconv.ParseInt(s, 10, bitSize)
+}
+
+// parseUintAuto parses an unsigned integer string, auto-detecting hex (0x prefix) or decimal.
+func parseUintAuto(s string, bitSize int) (uint64, error) {
+	if has0xPrefix(s) {
+		return strconv.ParseUint(remove0xPrefix(s), 16, bitSize)
+	}
+	return strconv.ParseUint(s, 10, bitSize)
+}
+
+// splitTopLevel splits a string by top-level commas, respecting nested
+// parentheses, brackets, and double-quoted strings. It does NOT strip
+// outer wrappers.
+//
+// Double-quoted strings are treated as atomic tokens: commas, parentheses,
+// and brackets inside quotes do not affect splitting. The quotes themselves
+// are stripped from the output. Use \" to include a literal quote.
+//
+//	"address, (uint256, bool)"            ----> ["address", "(uint256, bool)"]
+//	`"hello, world", 123`                ----> ["hello, world", "123"]
+//	`("hello, world", true)`             ----> [`("hello, world", true)`]  (inside parens, not split)
+func splitTopLevel(input string) []string {
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return nil
 	}
 
 	var rv []string
-	var curArg string
-	var curArgFinished = false
+	var curArg strings.Builder
+	var depth = 0     // combined depth for () and []
+	var inQuote bool  // inside double-quoted string
+	var hadQuote bool // current arg contained quoted content (don't trim)
+	var prevCh rune
 
-	var processingTuple = false
-	var numOfOpenLeftPar = 0
-
-	var processingSubArray = false
-	var numOfOpenLeftBrackets = 0
-	for _, ch := range input {
-		if ch == ',' {
-			if processingTuple || processingSubArray {
-				curArg = curArg + "," // keep ',' while process tuple or sub array
-			} else {
-				curArgFinished = true // end previous arg, discard ','
-			}
-		} else {
-			curArgFinished = false
-			curArg = curArg + string(ch)
-
-			if ch == '(' {
-				numOfOpenLeftPar = numOfOpenLeftPar + 1
-				processingTuple = true
-			} else if ch == ')' {
-				numOfOpenLeftPar = numOfOpenLeftPar - 1
-				if numOfOpenLeftPar == 0 { // all nested tuple closed
-					processingTuple = false // close the out tuple
-				}
-			}
-
-			if ch == '[' {
-				numOfOpenLeftBrackets = numOfOpenLeftBrackets + 1
-				processingSubArray = true
-			} else if ch == ']' {
-				numOfOpenLeftBrackets = numOfOpenLeftBrackets - 1
-				if numOfOpenLeftBrackets == 0 { // all nested tuple closed
-					processingSubArray = false // close the out tuple
-				}
-			}
+	appendArg := func() {
+		s := curArg.String()
+		if !hadQuote {
+			s = strings.TrimSpace(s)
 		}
-
-		if curArgFinished {
-			rv = append(rv, strings.TrimSpace(curArg))
-			curArg = ""
-		}
+		rv = append(rv, s)
+		curArg.Reset()
+		hadQuote = false
 	}
-	rv = append(rv, strings.TrimSpace(curArg)) // append the last arg
+
+	for _, ch := range input {
+		if inQuote {
+			if ch == '"' && prevCh != '\\' {
+				inQuote = false
+				// don't append the closing quote
+			} else if ch == '\\' && prevCh != '\\' {
+				// escape char — don't append, wait for next char
+			} else {
+				curArg.WriteRune(ch)
+			}
+			prevCh = ch
+			continue
+		}
+
+		switch ch {
+		case '"':
+			if depth == 0 {
+				// Only process quotes at top level — nested quotes are preserved
+				// literally for recursive parsing in inner layers.
+				inQuote = true
+				hadQuote = true
+				// Discard leading whitespace before the quote
+				if strings.TrimSpace(curArg.String()) == "" {
+					curArg.Reset()
+				}
+			} else {
+				curArg.WriteRune(ch)
+			}
+		case '(', '[':
+			depth++
+			curArg.WriteRune(ch)
+		case ')', ']':
+			depth--
+			curArg.WriteRune(ch)
+		case ',':
+			if depth > 0 {
+				curArg.WriteRune(',')
+			} else {
+				appendArg()
+			}
+		default:
+			curArg.WriteRune(ch)
+		}
+		prevCh = ch
+	}
+	appendArg()
 
 	return rv
 }
@@ -927,7 +1034,7 @@ func splitData(input string) []string {
 // uint[] -> uint256[]
 // int[] -> int256[]
 func typeNormalize(input string) string {
-	re := regexp.MustCompile(`\b([u]int)\b`)
+	re := regexp.MustCompile(`\b(u?int)\b`)
 	return re.ReplaceAllString(input, "${1}256")
 }
 
@@ -1177,32 +1284,4 @@ func scientificNotation2Decimal(input string) (string, error) {
 
 	log.Printf("convert %v to %v", input, result)
 	return result, nil
-}
-
-// BuildTupleArgData build tuple data accepted by abi Pack
-// An example:
-// typ: abi.NewType("tuple", "", []abi.ArgumentMarshaling{{Name: "Field0", Type: "uint256"}, {Name: "Field1", Type: "bool"}})
-// data: ["15", "true"]
-// return: A dynamically created struct object: { Field0: big.NewInt("15"), Field1: true }
-func BuildTupleArgData(typ abi.Type, data []string) (any, error) {
-	if typ.T != abi.TupleTy {
-		return nil, fmt.Errorf("bad type, only accept tuple type")
-	}
-
-	// log.Printf("data = %v", data)
-	if len(typ.TupleRawNames) != len(data) {
-		return nil, fmt.Errorf("type and data length mismatch, type length %d, data length %d", len(typ.TupleRawNames), len(data))
-	}
-
-	v := reflect.New(typ.TupleType).Elem()
-	elemTypes := typ.TupleElems
-	for index, name := range typ.TupleRawNames {
-		d, err := buildConcreteData(elemTypes[index].String(), data[index])
-		if err != nil {
-			return nil, fmt.Errorf("buildConcreteData failed: %w", err)
-		}
-		v.FieldByName(name).Set(reflect.ValueOf(d))
-	}
-
-	return v.Addr().Interface(), nil
 }

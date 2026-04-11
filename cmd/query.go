@@ -177,7 +177,7 @@ func buildReturnArgs(funcDefinition string) (abi.Arguments, error) {
 	var theReturnTypes abi.Arguments
 
 	returnPart := partAfterReturns[leftParenthesisLoc+1 : rightParenthesisLoc]
-	returnList := splitData(returnPart)
+	returnList := splitTopLevel(returnPart)
 	for index, returnElem := range returnList {
 		theReturnName := "ret" + strconv.FormatInt(int64(index), 10) // default name ret0, ret1, etc
 

@@ -132,6 +132,7 @@ func init() {
 	rootCmd.AddCommand(buildRawTxCmd)
 	rootCmd.AddCommand(broadcastTxCmd)
 	rootCmd.AddCommand(decodeTxCmd)
+	rootCmd.AddCommand(decodeCalldataCmd)
 	rootCmd.AddCommand(getCodeCmd)
 	rootCmd.AddCommand(erc20Cmd)
 	rootCmd.AddCommand(keccakCmd)
