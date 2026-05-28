@@ -17,6 +17,14 @@ import (
 	"math/big"
 )
 
+var eip7702SetEoaCodeHexData string
+var eip7702SetEoaCodeSignData string
+
+func init() {
+	eip7702SetEoaCodeCmd.Flags().StringVarP(&eip7702SetEoaCodeHexData, "hex-data", "", "", "the payload hex data when encoding raw tx")
+	eip7702SetEoaCodeCmd.Flags().StringVarP(&eip7702SetEoaCodeSignData, "sign-data", "", "", "65 bytes signature in [R || S || V] format where V is 0 or 1.")
+}
+
 // eip7702SetEoaCodeCmd represents the setEoaCode command
 var eip7702SetEoaCodeCmd = &cobra.Command{
 	Use:   "eip7702-set-eoa-code <delegate-to>",
@@ -48,7 +56,7 @@ var eip7702SetEoaCodeCmd = &cobra.Command{
 			privateKey = hexToPrivateKey(globalOptPrivateKey)
 		}
 
-		if globalOptPrivateKey == "" && buildRawTxSignData == "" {
+		if globalOptPrivateKey == "" && eip7702SetEoaCodeSignData == "" {
 			log.Fatalf("require --sign-data or --private-key")
 		}
 
@@ -60,7 +68,7 @@ var eip7702SetEoaCodeCmd = &cobra.Command{
 
 		log.Printf("%s current code = %s", fromAddress, hexutil.Encode(currentCode))
 
-		signedTx, err := BuildEip7702SignedTx(globalClient.EthClient, privateKey, &toAddress, valueInEther.BigInt(), common.FromHex(buildRawTxHexData), common.FromHex(buildRawTxSignData), delegateTo)
+		signedTx, err := BuildEip7702SignedTx(globalClient.EthClient, privateKey, &toAddress, valueInEther.BigInt(), common.FromHex(eip7702SetEoaCodeHexData), common.FromHex(eip7702SetEoaCodeSignData), delegateTo)
 		checkErr(err)
 
 		signedRawTx, err := GenRawTx(signedTx)
