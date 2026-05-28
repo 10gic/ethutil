@@ -25,7 +25,12 @@ func init() {
 var buildRawTxCmd = &cobra.Command{
 	Use:   "build-raw-tx <to-address> <hex-data>",
 	Short: "Build raw transaction (for eth_sendRawTransaction). Requires exactly one of --private-key or --sign-data.",
-	Args:  cobra.ExactArgs(2),
+	Long: `Build raw transaction (for eth_sendRawTransaction). Requires exactly one of --private-key or --sign-data.
+
+Arguments:
+  <to-address>   recipient address (0x-prefixed).
+  <hex-data>     calldata, 0x-prefixed hex. Pass 0x if no calldata is needed (e.g. a plain transfer).`,
+	Args: cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		InitGlobalClient(globalOptNodeUrl)
 
